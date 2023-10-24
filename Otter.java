@@ -48,6 +48,7 @@ public class Otter {
     evaluate("\\: : $: \\;");
     evaluate(": ; $; \\;i");
     evaluate(": immediate $i ;");
+    evaluate(": postpone $p ;");
     evaluate(": recurse $^ ; immediate");
     evaluate(": drop $_ ;");
     evaluate(": dup $d ;");
@@ -146,6 +147,10 @@ public class Otter {
   public void branch() { long f = d[--dp]; long t = d[--dp]; long b = d[--dp]; if (b != 0) eval((int)t); else eval((int)f); }
   public void times() { long q = d[--dp]; long n = d[--dp]; for (;n > 0;n--) { eval((int)q); } }
 
+  public void postpone() {
+    parse_name();
+  }
+  
   public void step() {
     switch (c.get(ip++)) {
       /* Literals */
@@ -186,6 +191,8 @@ public class Otter {
       /* Combinators */
       case '?': branch(); break;
       case 't': times(); break;
+
+      case 'p': postpone(); break;
     }
   }
 
