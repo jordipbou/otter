@@ -6,12 +6,13 @@ class Main {
       new BufferedReader(
         new InputStreamReader(
           System.in)); 
-    Otter x = new Otter();
+    Otter o = new Otter();
   
     while (true) {
       System.out.print("> ");
-      x.evaluate(obj.readLine());
-      x.trace();
+      o.evaluate(obj.readLine());
+      o.m.trace();
+			System.out.println("Ok");
     } 
   }
 }
