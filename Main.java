@@ -7,7 +7,7 @@ class Main {
         new InputStreamReader(
           System.in)); 
     Otter o = new Otter();
-    o.extensions['H' - 'A'] = new TestExtension();
+    o.extensions['H' - 'A'] = x -> { System.out.println("Hello world!"); };
   
     while (true) {
       System.out.print("> ");

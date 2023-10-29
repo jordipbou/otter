@@ -1,10 +1,11 @@
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.function.Consumer;
 
 public class Otter {
   public ByteBuffer block;
-  public Runnable[] extensions;
+  public Consumer<Otter>[] extensions;
   public long[] s;
   public int sp;
   public long[] r;
@@ -17,7 +18,7 @@ public class Otter {
     r = new long[256];
     rp = 0;
     ip = 0;
-    extensions = new Runnable[26];
+    extensions = new Consumer[26];
   }
 
   public void push(long a) {
@@ -252,7 +253,7 @@ public class Otter {
       case 'U': case 'V':
       case 'W': case 'X':
       case 'Y': case 'Z':
-        extensions[(char)token() - 'A'].run();
+        extensions[(char)token() - 'A'].accept(this);
         break;
       default:
         switch (token()) {
