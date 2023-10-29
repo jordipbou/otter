@@ -10,8 +10,8 @@ class Main {
   
     while (true) {
       System.out.print("> ");
-      o.evaluate(obj.readLine());
-      o.m.trace();
+      o.isolated(obj.readLine());
+      o.trace();
 			System.out.println("Ok");
     } 
   }

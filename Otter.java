@@ -1,7 +1,323 @@
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 public class Otter {
+  public ByteBuffer block;
+  public long[] s;
+  public int sp;
+  public long[] r;
+  public int rp;
+  public int ip;
+
+  public Otter() {
+    s = new long[256];
+    sp = 0;
+    r = new long[256];
+    rp = 0;
+    ip = 0;
+  }
+
+  public void push(long a) {
+    s[sp++] = a;
+  }
+
+  public long pop() {
+    return s[--sp];
+  }
+
+  public void drop() {
+    sp--;
+  }
+
+  public void dup() {
+    long a = pop();
+    push(a);
+    push(a);
+  }
+
+  public void over() {
+    long a = pop();
+    long b = pop();
+    push(b);
+    push(a);
+    push(a);
+  }
+  
+  public void swap() {
+    long a = pop();
+    long b = pop();
+    push(a);
+    push(b);
+  }
+
+  public void rot() {
+    long a = pop();
+    long b = pop();
+    long c = pop();
+    push(b);
+    push(a);
+    push(c);
+  }
+
+  public void nip() {
+    long a = pop();
+    long b = pop();
+    push(a);
+  }
+  
+  public void add() {
+    long a = pop();
+    long b = pop();
+    push(b + a);
+  }
+
+  public void sub() {
+    long a = pop();
+    long b = pop();
+    push(b - a);
+  }
+  
+  public void mul() {
+    long a = pop();
+    long b = pop();
+    push(b * a);
+  }
+
+  public void div() {
+    long a = pop();
+    long b = pop();
+    push(b / a);
+  }
+
+  public void mod() {
+    long a = pop();
+    long b = pop();
+    push(b % a);
+  }
+
+  public void and() {
+    long a = pop();
+    long b = pop();
+    push(b & a);
+  }
+
+  public void or() {
+    long a = pop();
+    long b = pop();
+    push(a | b);
+  }
+
+  public void xor() {
+    long a = pop();
+    long b = pop();
+    push(b ^ a);
+  }
+
+  public void invert() {
+    long a = pop();
+    push(~a);
+  }
+
+  public void lt() {
+    long a = pop();
+    long b = pop();
+    push(b < a ? -1L : 0L);
+  }
+
+  public void eq() {
+    long a = pop();
+    long b = pop();
+    push(b == a ? -1L : 0L);
+  }
+
+  public void gt() {
+    long a = pop();
+    long b = pop();
+    push(b > a ? -1L : 0L);
+  }
+
+  public void bfetch() {
+    long a = pop();
+    push((long)block.get((int)a));
+  }
+
+  public void bstore() {
+    long a = pop();
+    long b = pop();
+    block.put((int)a, (byte)b);
+  }
+
+  public void sfetch() {
+    long a = pop();
+    push((long)block.getShort((int)a));
+  }
+
+  public void sstore() {
+    long a = pop();
+    long b = pop();
+    block.putShort((int)a, (short)b);
+  }
+
+  public void ifetch() {
+    long a = pop();
+    push((long)block.getInt((int)a));
+  }
+
+  public void istore() {
+    long a = pop();
+    long b = pop();
+    block.putInt((int)a, (int)b);
+  }
+
+  public void cfetch() {
+    long a = pop();
+    push(block.getLong((int)a));
+  }
+
+  public void cstore() {
+    long a = pop();
+    long b = pop();
+    block.putLong((int)a, b);
+  }
+
+  public boolean tail() {
+    return
+      ip >= block.capacity()
+      || block.get(ip) == ']'
+      || block.get(ip) == '}';
+  }
+
+  public void execute() {
+    long q = pop();
+    if (!tail())
+      r[rp++] = ip;
+    ip = (int)q;
+  }
+
+  public void eval(long q) {
+    push(q);
+    execute();
+    inner();
+  }
+
+  public byte peek() { 
+    return block.get(ip); 
+  }
+
+  public byte token() {
+    return block.get(ip++);
+  }
+
+  public void block() {
+    push(ip);
+    int t = 1;
+    while (t > 0) {
+      switch (token()) {
+        case '{': case '[': t++; break;
+        case '}': case ']': t--; break;
+      }
+    }
+  }
+
+  public void ret() {
+    if (rp > 0) 
+      ip = (int)r[--rp];
+    else
+      ip = block.capacity();
+  }
+
+  public void times() {
+    long q = pop();
+    long n = pop();
+    for (;n > 0; n--) {
+      eval(q);
+    }
+  }
+  public void step() {
+    switch (peek()) {
+      default:
+        switch (token()) {
+          case '1': push(1L); break;
+            
+          case '_': drop(); break;
+          case 'd': dup(); break;
+          case 'o': over(); break;
+          case 's': swap(); break;
+          case 'r': rot(); break;
+          case 'n': nip(); break;
+
+          case '+': add(); break;
+          case '-': sub(); break;
+          case '*': mul(); break;
+          case '/': div(); break;
+          case '%': mod(); break;
+
+          case '&': and(); break;
+          case '|': or(); break;
+          case '~': invert(); break;
+          case '^': xor(); break;
+
+          case '<': lt(); break;
+          case '=': eq(); break;
+          case '>': gt(); break;
+
+          case '!': cstore(); break;
+          case '@': cfetch(); break;
+          case '"': istore(); break;
+          case '\'': ifetch(); break;
+          case ',': sstore(); break;
+          case '.': sfetch(); break;
+          case ';': bstore(); break;
+          case ':': bfetch(); break;
+
+          case '{': block(); break;
+          case '}': ret(); break;
+            
+          case 't': times(); break;
+        }
+    }
+  }
+  
+  public void inner() {
+    int t = rp;
+    while (t <= rp && ip < block.capacity()) {
+      trace();
+      step();
+      // Manage errors
+    }
+  }
+  
+  public void isolated(String s) {
+    block = ByteBuffer.wrap(s.getBytes(Charset.forName("UTF-8")));
+    ip = 0;
+    inner();
+  }
+
+  public void dump_code(int c) {
+    int t = 1;
+    while (t > 0 && c >= 0 && c < block.capacity()) {
+      switch (block.get(c)) {
+        case '{': case '[': t++; break;
+        case '}': case ']': t--; break;
+      }
+      System.out.print((char)block.get(c++));
+    }
+  }
+  
+  public void trace() {
+    for (int i = 0; i < sp; i++) {
+      System.out.printf("%d ", s[i]);
+    }
+    System.out.print(" : ");
+    dump_code(ip);
+    for (int i = rp - 1; i >= 0; i--) {
+      System.out.print(" : ");
+      dump_code((int)r[i]);
+    }
+    System.out.println();
+  }
+/*
 	public static int DICT_SIZE = 65536;
 
 	public static byte NO_FLAGS = 0;
@@ -353,7 +669,7 @@ public class Otter {
 					try {
 				    BigDecimal n = new BigDecimal(sb.toString());
 						m.push(n.longValueExact());
-						/* TODO: Compile */
+						// TODO: Compile
           } catch (NumberFormatException | ArithmeticException e) {
             System.out.println("WORD NOT FOUND");
             System.out.println(sb.toString());
@@ -363,4 +679,5 @@ public class Otter {
 			}
 		}
 	}
+*/
 }
