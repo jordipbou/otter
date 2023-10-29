@@ -8,6 +8,7 @@ class Main {
           System.in)); 
     Otter o = new Otter();
     o.extensions['H' - 'A'] = x -> { System.out.println("Hello world!"); };
+    o.extensions['C' - 'A'] = new Combinators();
   
     while (true) {
       System.out.print("> ");
