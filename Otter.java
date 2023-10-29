@@ -230,11 +230,23 @@ public class Otter {
       ip = block.capacity();
   }
 
-  public void times() {
-    long q = pop();
-    long n = pop();
-    for (;n > 0; n--) {
-      eval(q);
+  public void string() {
+    int c = 0;
+    push(ip);
+    while (token() != '"') { c++; }
+    push(c); 
+  }
+
+  public void emit() {
+    char c = (char)pop();
+    System.out.print(c);
+  }
+
+  public void key() {
+    try {
+      push((long)System.in.read());   
+    } catch (java.io.IOException e) {
+      // put correct error code in err
     }
   }
   
@@ -257,6 +269,7 @@ public class Otter {
         break;
       default:
         switch (token()) {
+          case '0': push(0L); break;
           case '1': push(1L); break;
             
           case '_': drop(); break;
@@ -283,7 +296,7 @@ public class Otter {
 
           case '!': cstore(); break;
           case '@': cfetch(); break;
-          case '"': istore(); break;
+          case '`': istore(); break;
           case '\'': ifetch(); break;
           case ',': sstore(); break;
           case '.': sfetch(); break;
@@ -292,8 +305,11 @@ public class Otter {
 
           case '{': block(); break;
           case '}': ret(); break;
-            
-          case 't': times(); break;
+
+          case '"': string(); break;
+
+          case 'e': emit(); break;
+          case 'k': key(); break;
         }
     }
   }
