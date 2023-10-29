@@ -4,6 +4,7 @@ import java.nio.charset.Charset;
 
 public class Otter {
   public ByteBuffer block;
+  public Runnable[] extensions;
   public long[] s;
   public int sp;
   public long[] r;
@@ -16,6 +17,7 @@ public class Otter {
     r = new long[256];
     rp = 0;
     ip = 0;
+    extensions = new Runnable[26];
   }
 
   public void push(long a) {
@@ -234,8 +236,24 @@ public class Otter {
       eval(q);
     }
   }
+  
   public void step() {
     switch (peek()) {
+      case 'A': case 'B':
+      case 'C': case 'D':
+      case 'E': case 'F':
+      case 'G': case 'H':
+      case 'I': case 'J':
+      case 'K': case 'L':
+      case 'M': case 'N':
+      case 'O': case 'P':
+      case 'Q': case 'R':
+      case 'S': case 'T':
+      case 'U': case 'V':
+      case 'W': case 'X':
+      case 'Y': case 'Z':
+        extensions[(char)token() - 'A'].run();
+        break;
       default:
         switch (token()) {
           case '1': push(1L); break;
