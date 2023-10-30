@@ -44,7 +44,7 @@ public class Otter {
     long b = pop();
     push(b);
     push(a);
-    push(a);
+    push(b);
   }
   
   public void swap() {
@@ -215,7 +215,7 @@ public class Otter {
   public void block() {
     push(ip);
     int t = 1;
-    while (t > 0) {
+    while (t > 0 && ip < block.capacity()) {
       switch (token()) {
         case '{': case '[': t++; break;
         case '}': case ']': t--; break;
@@ -237,6 +237,18 @@ public class Otter {
     push(c); 
   }
 
+  public void number() {
+    int n = 0;
+    while (ip < block.capacity()) {
+      byte c = peek();
+      if (c >= '0' && c <= '9') {
+        n = n * 10 + c - '0';
+        ip++;
+      } else break;
+    }
+    push(n);
+  } 
+  
   public void emit() {
     char c = (char)pop();
     System.out.print(c);
@@ -271,6 +283,7 @@ public class Otter {
         switch (token()) {
           case '0': push(0L); break;
           case '1': push(1L); break;
+          case '#': number(); break;
             
           case '_': drop(); break;
           case 'd': dup(); break;
@@ -317,7 +330,7 @@ public class Otter {
   public void inner() {
     int t = rp;
     while (t <= rp && ip < block.capacity()) {
-      trace();
+      //trace();
       step();
       // Manage errors
     }
