@@ -7,12 +7,15 @@ class Main {
         new InputStreamReader(
           System.in)); 
     Otter o = new Otter();
-    o.extensions['H' - 'A'] = x -> { System.out.println("Hello world!"); };
+    Sloth s = new Sloth(o, 65536);
+    
+    // o.extensions['H' - 'A'] = x -> { System.out.println("Hello world!"); };
     o.extensions['C' - 'A'] = new Combinators();
   
     while (true) {
       System.out.print("> ");
-      o.isolated(obj.readLine());
+      //o.isolated(obj.readLine());
+      s.evaluate(o, obj.readLine());
       o.trace();
 			System.out.println("Ok");
     } 

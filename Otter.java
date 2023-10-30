@@ -29,6 +29,18 @@ public class Otter {
     return s[--sp];
   }
 
+  public long top() {
+    return s[sp - 1];
+  }
+
+  public long next() {
+    return s[sp - 2];
+  }
+
+  public long nnext() {
+    return s[sp - 3];
+  }
+
   public void drop() {
     sp--;
   }
@@ -237,6 +249,23 @@ public class Otter {
     push(c); 
   }
 
+  public void compare() {
+    long l2 = pop();
+    long s2 = pop();
+    long l1 = pop();
+    long s1 = pop();
+    // TODO
+  }
+
+  public void copy() {
+    long l = pop();
+    long d = pop();
+    long s = pop();
+    for (int i = 0; i < l; i++) {
+      block.put((int)d + i, block.get((int)s + i));
+    }
+  }
+  
   public void number() {
     int n = 0;
     while (ip < block.capacity()) {
@@ -284,6 +313,7 @@ public class Otter {
           case '0': push(0L); break;
           case '1': push(1L); break;
           case '#': number(); break;
+          case '\'': push((long)block.get(ip++)); break;
             
           case '_': drop(); break;
           case 'd': dup(); break;
@@ -309,8 +339,10 @@ public class Otter {
 
           case '!': cstore(); break;
           case '@': cfetch(); break;
+            /*
           case '`': istore(); break;
           case '\'': ifetch(); break;
+          */
           case ',': sstore(); break;
           case '.': sfetch(); break;
           case ';': bstore(); break;
@@ -320,6 +352,8 @@ public class Otter {
           case '}': ret(); break;
 
           case '"': string(); break;
+          case 'm': compare(); break;
+          case 'y': copy(); break;
 
           case 'e': emit(); break;
           case 'k': key(); break;
@@ -330,7 +364,7 @@ public class Otter {
   public void inner() {
     int t = rp;
     while (t <= rp && ip < block.capacity()) {
-      //trace();
+      trace();
       step();
       // Manage errors
     }
