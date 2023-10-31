@@ -11,6 +11,7 @@ public class Otter {
   public long[] r;
   public int rp;
   public int ip;
+	public int err;
 
   public Otter() {
     s = new long[256];
@@ -245,7 +246,7 @@ public class Otter {
   public void string() {
     int c = 0;
     push(ip);
-    while (token() != '"') { c++; }
+    while (ip < block.capacity() && token() != '"') { c++; }
     push(c); 
   }
 
@@ -290,6 +291,14 @@ public class Otter {
       // put correct error code in err
     }
   }
+
+	public void type() {
+		long l = pop();
+		long s = pop();
+		for (int i = 0; i < l; i++) {
+			System.out.print((char)block.get((int)(s + i)));
+		}
+	}
   
   public void step() {
     switch (peek()) {
@@ -350,6 +359,8 @@ public class Otter {
 
           case '{': block(); break;
           case '}': ret(); break;
+					// case '[': quotation(); break;
+					case ']': ret(); break;
 
           case '"': string(); break;
           case 'm': compare(); break;
@@ -357,6 +368,8 @@ public class Otter {
 
           case 'e': emit(); break;
           case 'k': key(); break;
+					//case 'a': accept(); break;
+					case 't': type(); break;
         }
     }
   }
@@ -364,7 +377,7 @@ public class Otter {
   public void inner() {
     int t = rp;
     while (t <= rp && ip < block.capacity()) {
-      trace();
+      //trace();
       step();
       // Manage errors
     }
@@ -391,13 +404,14 @@ public class Otter {
     for (int i = 0; i < sp; i++) {
       System.out.printf("%d ", s[i]);
     }
-    System.out.print(" : ");
-    dump_code(ip);
+		if (ip < block.capacity()) {
+	    System.out.print(" : ");
+	    dump_code(ip);
+		}
     for (int i = rp - 1; i >= 0; i--) {
       System.out.print(" : ");
       dump_code((int)r[i]);
     }
-    System.out.println();
   }
 /*
 	public static int DICT_SIZE = 65536;
