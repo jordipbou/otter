@@ -377,7 +377,7 @@ public class Otter {
   public void inner() {
     int t = rp;
     while (t <= rp && ip < block.capacity()) {
-      //trace();
+      trace(); System.out.println();
       step();
       // Manage errors
     }

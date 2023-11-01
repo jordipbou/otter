@@ -16,7 +16,7 @@ class Main {
       System.out.print("> ");
       //o.isolated(obj.readLine());
       s.evaluate(o, obj.readLine());
-      o.trace();
+      s.trace(o);
 			System.out.println("Ok");
     } 
   }

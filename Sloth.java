@@ -26,6 +26,9 @@ public class Sloth implements Consumer<Otter> {
 		o.block.putInt(pILEN, 0);
 		o.block.putInt(pIPOS, 0);
 		o.block.putInt(pHERE, pMIN_HERE);
+    o.block.put(pABUF_RETURN, (byte)']');
+    o.ip = size;
+    o.extensions['S' - 'A'] = this;
 	}
 
 	public void align(Otter o) {
@@ -33,16 +36,8 @@ public class Sloth implements Consumer<Otter> {
 	}
 
 	public boolean in_buffer(Otter o) { return o.block.getInt(pIPOS) < o.block.getInt(pILEN); }
-	public byte token(Otter o) { return o.block.get(o.block.getInt(pIPOS)); }
+	public byte token(Otter o) { return o.block.get(pIBUF + o.block.getInt(pIPOS)); }
 	public void next(Otter o) { o.block.putInt(pIPOS, o.block.getInt(pIPOS) + 1); }
-
-  public void parse_spaces(Otter o) {
-    while (in_buffer(o) && Character.isWhitespace(token(o))) { next(o); }
-  }
-  
-  public void parse_non_spaces(Otter o) {
-    while (in_buffer(o) && !Character.isWhitespace(token(o))) { next(o); }
-  }
 
   public void parse(Otter o) {
     byte c = (byte)o.pop();
@@ -53,9 +48,9 @@ public class Sloth implements Consumer<Otter> {
   }
 
   public void parse_name(Otter o) {
-    parse_spaces(o);
+    while (in_buffer(o) && Character.isWhitespace(token(o))) { next(o); }
     o.push(pIBUF + o.block.getInt(pIPOS));
-    parse_non_spaces(o);
+    while (in_buffer(o) && !Character.isWhitespace((char)token(o))) { next(o); }
     o.push(pIBUF + o.block.getInt(pIPOS) - o.top());
   }
 
@@ -82,6 +77,7 @@ public class Sloth implements Consumer<Otter> {
 		o.block.putInt(pHERE, o.block.getInt(pHERE) + wSIZE + (int)l);
 		align(o);
 		o.block.putInt(w + wPREVIOUS, o.block.getInt(pLATEST));
+    o.block.putInt(pLATEST, w);
 		o.block.putInt(w + wCODE, o.block.getInt(pHERE));
 		o.block.put(w + wFLAGS, VARIABLE);
 		o.block.put(w + wNAMELEN, (byte)l);
@@ -97,7 +93,8 @@ public class Sloth implements Consumer<Otter> {
 	}
 
 	public void semicolon(Otter o) {
-		o.block.put(pHERE, (byte)']');
+		o.block.put(o.block.getInt(pHERE), (byte)']');
+    o.block.putInt(pHERE, o.block.getInt(pHERE) + 1);
 		o.block.putInt(pSTATE, 0);
 		o.block.put(o.block.getInt(pLATEST) + wFLAGS, NO_FLAGS);
 	}
@@ -113,8 +110,8 @@ public class Sloth implements Consumer<Otter> {
 	}
 
 	public void find_name(Otter o) {
-		long t = o.pop();
 		long l = o.pop();
+		long t = o.pop();
 		long w = o.block.getInt(pLATEST);
 		while (w != -1) {
 			if (compare_names(o, (int)t, (byte)l, (int)w + wNAME, o.block.get((int)w + wNAMELEN)))
@@ -137,35 +134,73 @@ public class Sloth implements Consumer<Otter> {
 	public void evaluate(Otter o, String s) {
 		fill_input_buffer(o, s);
 		while (in_buffer(o)) {
+      trace(o);
 			parse_name(o);
 			if (o.top() == 0) { o.drop(); o.drop(); return; }
 			find_name(o);
 			long w = o.pop();
-			if (w != 0) {
+			if (w != -1) {
 				o.drop(); o.drop();
 				if (o.block.getInt(pSTATE) == 0 || (o.block.get((int)w + wFLAGS) & IMMEDIATE) == IMMEDIATE) {
 					o.eval(o.block.getInt((int)w + wCODE));
 				} else {
-					// compile
+          // Compile!
 				}
 			} else {
-				long l = o.pop();
-				long t = o.pop();
+        long l = o.pop();
+        long t = o.pop();
 				if (l == 1 && o.block.get((int)t) == ':') {
+          colon(o);
 				} else if (l == 1 && o.block.get((int)t) == ';') {
-				} else if (o.block.get((int)t) == '\\') {
-					// interpret_asm(o);
+          semicolon(o);
+				} else if (o.block.get((int)t) == (byte)'\\') {
+          o.push(t + 1);
+          o.push(pABUF_RETURN - l + 1);
+          o.push(l - 1);
+          o.copy();
+          o.eval(pABUF_RETURN - l + 1);
 				} else if (o.block.get((int)t) == '$') {
-					// compile_asm(o);
+					o.push(t + 1);
+          o.push(o.block.getInt(pHERE));
+          o.push(l - 1);
+          o.copy();
+          o.block.putInt(pHERE, o.block.getInt(pHERE) + (int)l - 1);
 				} else {
-					// to_number(o);
+ 					StringBuffer sb = new StringBuffer();
+					for (int i = 0; i < l; i++) {
+						sb.append((char)o.block.get((int)t + i));
+					}
+          System.out.println(sb.toString());
+					try {
+				    BigDecimal n = new BigDecimal(sb.toString());
+						o.push(n.longValueExact());
+						// TODO: Compile
+          } catch (NumberFormatException | ArithmeticException e) {
+            System.out.println("WORD NOT FOUND");
+            System.out.println(sb.toString());
+          }  
 				}
 			}
 		}
 	}
 
 	public void accept(Otter o) {
+    switch (o.token()) {
+      case 'h': o.push(o.block.getInt(pHERE)); break;
+      case 'n': parse_name(o); break;
+      case 'p': parse(o); break;
+    }
 	}
+
+  public void trace(Otter o) {
+    System.out.printf("[%d] ", o.block.getInt(pSTATE));
+    o.trace();
+    System.out.print("<");
+    for (int i = o.block.getInt(pIPOS); i < o.block.getInt(pILEN); i++) {
+      System.out.printf("%c", o.block.get(pIBUF + i));
+    }
+    System.out.println(">");
+  }
 
 /*
   public static int pSIZE = 0;
