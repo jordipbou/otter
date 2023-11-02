@@ -11,6 +11,7 @@ class Main {
     
     // o.extensions['H' - 'A'] = x -> { System.out.println("Hello world!"); };
     o.extensions['C' - 'A'] = new Combinators();
+    o.extensions['S' - 'A'] = s;
   
     while (true) {
       System.out.print("> ");

@@ -357,6 +357,7 @@ public class Otter {
           case ';': bstore(); break;
           case ':': bfetch(); break;
 
+          case 'x': execute(); break;
           case '{': block(); break;
           case '}': ret(); break;
 					// case '[': quotation(); break;
@@ -404,6 +405,7 @@ public class Otter {
     for (int i = 0; i < sp; i++) {
       System.out.printf("%d ", s[i]);
     }
+    System.out.printf("[%d]", ip);
 		if (ip < block.capacity()) {
 	    System.out.print(" : ");
 	    dump_code(ip);
