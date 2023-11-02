@@ -13,6 +13,7 @@ public class Sloth implements Consumer<Otter> {
     public static byte IMMEDIATE = 4;
     
     public int code;
+    public int codelen;
     public String name;
     public byte flags;
   }
@@ -86,9 +87,11 @@ public class Sloth implements Consumer<Otter> {
 
   public boolean colon(Otter o) {
     if (o.top() == 1 && ibuf.charAt((int)o.next()) == ':') {
+      o.drop(); o.drop();
       parse_name(o);
       long l = o.pop();
       long t = o.pop();
+      System.out.printf("Creating word: [%s]\n", ibuf.substring((int)t, (int)(t + l)));
       if (l == 0) { o.err = -16; return true; } // ZERO LENGTH NAME
       Word w = new Word();
       words.add(w);
@@ -103,22 +106,62 @@ public class Sloth implements Consumer<Otter> {
 
   public boolean semicolon(Otter o) {
     if (o.top() == 1 && ibuf.charAt((int)o.next()) == ';') {
-      o.block.put(here, (byte)']');
+      o.drop(); o.drop();
+      o.block.put(here++, (byte)']');
+      Word w = words.get(words.size() - 1);
       state = false; 
-      words.get(words.size() - 1).flags = Word.NO_FLAGS; 
+      w.flags = Word.NO_FLAGS;
+      w.codelen = here - w.code;
       return true; 
     } else return false;
   }
 
+  public void literal(Otter o) {
+    long n = o.pop();
+    if (n == 1) {
+      o.block.put(here++, (byte)'1');
+    } else if (n >= -128 && n <= 127) {
+      o.block.put(here++, (byte)'\'');
+      o.block.put(here++, (byte)n);
+    } else if (n >= -32768 && n <= 32767) {
+      o.block.put(here++, (byte)'2');
+      o.block.putShort(here, (short)n);
+      here += 2;
+    } else if (n >= -2147483648 && n <= 2147483647) {
+      o.block.put(here++, (byte)'4');
+      o.block.putInt(here, (int)n);
+      here += 4;
+    } else {
+      o.block.put(here++, (byte)'8');
+      o.block.putLong(here, (long)n);
+      here += 8;
+    }
+  }
+  
   public void number(Otter o) {
     long l = o.pop();
     long t = o.pop();
 	  try {
       BigDecimal n = new BigDecimal(ibuf.substring((int)t, (int)(t + l)));
 		  o.push(n.longValueExact());
-		  // TODO: Compile
+      if (state)
+        literal(o);
     } catch (NumberFormatException | ArithmeticException e) {
       o.err = -13; // Undefined word
+    }
+  }
+ 
+  public void compile(Otter o, Word w) {
+    // This if should depend on the size of the literal for this
+    // word...
+    if (w.codelen < 4) {
+      for (int i = 0; i < w.codelen - 1; i++) {
+        o.block.put(here++, o.block.get(w.code + i));
+      }
+    } else {
+      o.push(w.code);
+      literal(o);
+      o.block.put(here++, (byte)'x');
     }
   }
   
@@ -132,10 +175,11 @@ public class Sloth implements Consumer<Otter> {
       find_name(o);
       if (o.top() != -1) {
         Word w = words.get((int)o.pop());
+        o.drop(); o.drop();
         if (!state || (w.flags & Word.IMMEDIATE) == Word.IMMEDIATE) {
           o.eval(w.code);
         } else {
-          // compile 
+          compile(o, w);
         }
       } else {
         o.drop();

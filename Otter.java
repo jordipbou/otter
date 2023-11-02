@@ -277,7 +277,7 @@ public class Otter {
       } else break;
     }
     push(n);
-  } 
+  }
   
   public void emit() {
     char c = (char)pop();
@@ -323,6 +323,9 @@ public class Otter {
           case '1': push(1L); break;
           case '#': number(); break;
           case '\'': push((long)block.get(ip++)); break;
+          case '2': push((long)block.getShort(ip)); ip += 2; break;
+          case '4': push((long)block.getInt(ip)); ip += 4; break;
+          case '8': push((long)block.getLong(ip)); ip += 8; break;
             
           case '_': drop(); break;
           case 'd': dup(); break;
