@@ -42,6 +42,7 @@ class Main {
       //o.isolated(obj.readLine());
       s.evaluate(o, obj.readLine());
 			if (o.err != 0) {
+				if (o.err == -256) System.exit(0);
 				System.out.printf("ERROR: %d\n", o.err);
 				o.err = 0;
 				o.sp = 0;

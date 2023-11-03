@@ -26,7 +26,8 @@ public class Sloth implements Consumer<Otter> {
   public int here;
   
   public Sloth(Otter o, int size) {
-    o.block = ByteBuffer.allocateDirect(size);   
+    //o.block = ByteBuffer.allocateDirect(size);   
+		o.init_block(size);
     words = new ArrayList<Word>();
   }
 
@@ -36,14 +37,14 @@ public class Sloth implements Consumer<Otter> {
 		o.push(ipos);
     while (ipos < ilen && ibuf.charAt(ipos) != c) { ipos++; }
 		ipos++;
-		o.push(ipos - o.top());
+		o.push(ipos - o.T());
   }
   
   public void parse_name(Otter o) {
     while (ipos < ilen && Character.isWhitespace(ibuf.charAt(ipos))) { ipos++; }
     o.push(ipos);
     while (ipos < ilen && !Character.isWhitespace(ibuf.charAt(ipos))) { ipos++; }
-    o.push(ipos - o.top());
+    o.push(ipos - o.T());
   }
 
   public void find_name(Otter o) {
@@ -66,7 +67,7 @@ public class Sloth implements Consumer<Otter> {
   }
   
   public boolean asm(Otter o) {
-    if (o.top() > 1 && ibuf.charAt((int)o.next()) == '\\') {
+    if (o.T() > 1 && ibuf.charAt((int)o.N()) == '\\') {
       long l = o.pop() - 1;
       long t = o.pop() + 1;
       for (int i = 0; i < l; i++) {
@@ -78,7 +79,7 @@ public class Sloth implements Consumer<Otter> {
   }
 
   public boolean casm(Otter o) {
-    if (o.top() > 1 && ibuf.charAt((int)o.next()) == '$') {
+    if (o.T() > 1 && ibuf.charAt((int)o.N()) == '$') {
       long l = o.pop() - 1;
       long t = o.pop() + 1;
       for (int i = 0; i < l; i++) {
@@ -89,7 +90,7 @@ public class Sloth implements Consumer<Otter> {
   }
 
   public boolean colon(Otter o) {
-    if (o.top() == 1 && ibuf.charAt((int)o.next()) == ':') {
+    if (o.T() == 1 && ibuf.charAt((int)o.N()) == ':') {
       o.drop(); o.drop();
       parse_name(o);
       long l = o.pop();
@@ -107,7 +108,7 @@ public class Sloth implements Consumer<Otter> {
   }
 
   public boolean semicolon(Otter o) {
-    if (o.top() == 1 && ibuf.charAt((int)o.next()) == ';') {
+    if (o.T() == 1 && ibuf.charAt((int)o.N()) == ';') {
       o.drop(); o.drop();
       o.block.put(here++, (byte)']');
       Word w = words.get(words.size() - 1);
@@ -118,36 +119,13 @@ public class Sloth implements Consumer<Otter> {
     } else return false;
   }
 
-  public void literal(Otter o) {
-    long n = o.pop();
-    if (n == 1) {
-      o.block.put(here++, (byte)'1');
-    } else if (n >= -128 && n <= 127) {
-      o.block.put(here++, (byte)'\'');
-      o.block.put(here++, (byte)n);
-    } else if (n >= -32768 && n <= 32767) {
-      o.block.put(here++, (byte)'2');
-      o.block.putShort(here, (short)n);
-      here += 2;
-    } else if (n >= -2147483648 && n <= 2147483647) {
-      o.block.put(here++, (byte)'4');
-      o.block.putInt(here, (int)n);
-      here += 4;
-    } else {
-      o.block.put(here++, (byte)'8');
-      o.block.putLong(here, (long)n);
-      here += 8;
-    }
-  }
-  
   public void number(Otter o) {
     long l = o.pop();
     long t = o.pop();
 	  try {
       BigDecimal n = new BigDecimal(ibuf.substring((int)t, (int)(t + l)));
-		  o.push(n.longValueExact());
-      if (state)
-        literal(o);
+      if (state) o.literal(n.longValueExact());
+			else o.push(n.longValueExact());
     } catch (NumberFormatException | ArithmeticException e) {
       o.err = -13; // Undefined word
     }
@@ -161,8 +139,7 @@ public class Sloth implements Consumer<Otter> {
         o.block.put(here++, o.block.get(w.code + i));
       }
     } else {
-      o.push(w.code);
-      literal(o);
+      o.literal(w.code);
       o.block.put(here++, (byte)'x');
     }
   }
@@ -173,9 +150,9 @@ public class Sloth implements Consumer<Otter> {
     ilen = s.length();
     while (ipos < ilen) {
       parse_name(o);
-      if (o.top() == 0) { o.drop(); o.drop(); return; }
+      if (o.T() == 0) { o.drop(); o.drop(); return; }
       find_name(o);
-      if (o.top() != -1) {
+      if (o.T() != -1) {
         Word w = words.get((int)o.pop());
         o.drop(); o.drop();
         if (!state || (w.flags & IMMEDIATE) == IMMEDIATE) {
