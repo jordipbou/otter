@@ -25,198 +25,50 @@ public class Otter {
 		tr = false;
   }
 
-  public void push(long a) {
-    s[sp++] = a;
-  }
+  public long T() { return s[sp - 1]; }
+  public long N() { return s[sp - 2]; }
+  public long NN() { return s[sp - 3]; }
 
-  public long pop() {
-    return s[--sp];
-  }
+  public void push(long a) { s[sp++] = a; }
+  public long pop() { return s[--sp]; }
+  public void drop() { sp--; }
+  public void dup() { long a = pop(); push(a); push(a); }
+  public void over() { long a = pop(); long b = pop(); push(b); push(a); push(b); }
+  public void swap() { long a = pop(); long b = pop(); push(a); push(b); }
+  public void rot() { long a = pop(); long b = pop(); long c = pop(); push(b); push(a); push(c); }
+  public void nip() { long a = pop(); long b = pop(); push(a); }
+	public void pick() { long n = pop(); push(s[sp - 1 - (int)n]); }
 
-  public long top() {
-    return s[sp - 1];
-  }
-
-  public long next() {
-    return s[sp - 2];
-  }
-
-  public long nnext() {
-    return s[sp - 3];
-  }
-
-  public void drop() {
-    sp--;
-  }
-
-  public void dup() {
-    long a = pop();
-    push(a);
-    push(a);
-  }
-
-  public void over() {
-    long a = pop();
-    long b = pop();
-    push(b);
-    push(a);
-    push(b);
-  }
+	public void to_r() { r[rp++] = s[--sp];	}
+	public void from_r() { s[sp++] = r[--rp];	}
   
-  public void swap() {
-    long a = pop();
-    long b = pop();
-    push(a);
-    push(b);
-  }
+  public void add() { long a = pop(); long b = pop(); push(b + a); }
+  public void sub() { long a = pop(); long b = pop(); push(b - a); }
+  public void mul() { long a = pop(); long b = pop(); push(b * a); }
+  public void div() { long a = pop(); long b = pop(); push(b / a); }
+  public void mod() { long a = pop(); long b = pop(); push(b % a); }
 
-  public void rot() {
-    long a = pop();
-    long b = pop();
-    long c = pop();
-    push(b);
-    push(a);
-    push(c);
-  }
+  public void and() { long a = pop(); long b = pop(); push(b & a); }
+  public void or() { long a = pop(); long b = pop(); push(a | b); }
+  public void xor() { long a = pop(); long b = pop(); push(b ^ a); }
+  public void invert() { long a = pop(); push(~a); }
 
-  public void nip() {
-    long a = pop();
-    long b = pop();
-    push(a);
-  }
+  public void lt() { long a = pop(); long b = pop(); push(b < a ? -1L : 0L); }
+  public void eq() { long a = pop(); long b = pop(); push(b == a ? -1L : 0L); }
+  public void gt() { long a = pop(); long b = pop(); push(b > a ? -1L : 0L); }
+	public void zeq() { long n = pop(); push(n == 0 ? -1 : 0); }
 
-	public void pick() {
-		long n = pop();
-		push(s[sp - 1 - (int)n]);
-	}
+  public void bfetch() { long a = pop(); push((long)block.get((int)a)); }
+  public void bstore() { long a = pop(); long b = pop(); block.put((int)a, (byte)b); }
 
-	public void to_r() {
-		r[rp++] = s[--sp];
-	}
+  public void sfetch() { long a = pop(); push((long)block.getShort((int)a)); }
+  public void sstore() { long a = pop(); long b = pop(); block.putShort((int)a, (short)b); }
 
-	public void from_r() {
-		s[sp++] = r[--rp];
-	}
-  
-  public void add() {
-    long a = pop();
-    long b = pop();
-    push(b + a);
-  }
+  public void ifetch() { long a = pop(); push((long)block.getInt((int)a)); }
+  public void istore() { long a = pop(); long b = pop(); block.putInt((int)a, (int)b); }
 
-  public void sub() {
-    long a = pop();
-    long b = pop();
-    push(b - a);
-  }
-  
-  public void mul() {
-    long a = pop();
-    long b = pop();
-    push(b * a);
-  }
-
-  public void div() {
-    long a = pop();
-    long b = pop();
-    push(b / a);
-  }
-
-  public void mod() {
-    long a = pop();
-    long b = pop();
-    push(b % a);
-  }
-
-  public void and() {
-    long a = pop();
-    long b = pop();
-    push(b & a);
-  }
-
-  public void or() {
-    long a = pop();
-    long b = pop();
-    push(a | b);
-  }
-
-  public void xor() {
-    long a = pop();
-    long b = pop();
-    push(b ^ a);
-  }
-
-  public void invert() {
-    long a = pop();
-    push(~a);
-  }
-
-  public void lt() {
-    long a = pop();
-    long b = pop();
-    push(b < a ? -1L : 0L);
-  }
-
-  public void eq() {
-    long a = pop();
-    long b = pop();
-    push(b == a ? -1L : 0L);
-  }
-
-  public void gt() {
-    long a = pop();
-    long b = pop();
-    push(b > a ? -1L : 0L);
-  }
-
-	public void zeq() {
-		long n = pop();
-		push(n == 0 ? -1 : 0);
-	}
-
-  public void bfetch() {
-    long a = pop();
-    push((long)block.get((int)a));
-  }
-
-  public void bstore() {
-    long a = pop();
-    long b = pop();
-    block.put((int)a, (byte)b);
-  }
-
-  public void sfetch() {
-    long a = pop();
-    push((long)block.getShort((int)a));
-  }
-
-  public void sstore() {
-    long a = pop();
-    long b = pop();
-    block.putShort((int)a, (short)b);
-  }
-
-  public void ifetch() {
-    long a = pop();
-    push((long)block.getInt((int)a));
-  }
-
-  public void istore() {
-    long a = pop();
-    long b = pop();
-    block.putInt((int)a, (int)b);
-  }
-
-  public void cfetch() {
-    long a = pop();
-    push(block.getLong((int)a));
-  }
-
-  public void cstore() {
-    long a = pop();
-    long b = pop();
-    block.putLong((int)a, b);
-  }
+  public void cfetch() { long a = pop(); push(block.getLong((int)a)); }
+  public void cstore() { long a = pop(); long b = pop(); block.putLong((int)a, b); }
 
   public boolean tail() {
     return
@@ -225,18 +77,8 @@ public class Otter {
       || block.get(ip) == '}';
   }
 
-  public void execute() {
-    long q = pop();
-    if (!tail())
-      r[rp++] = ip;
-    ip = (int)q;
-  }
-
-  public void eval(long q) {
-    push(q);
-    execute();
-    inner();
-  }
+  public void execute() { long q = pop(); if (!tail()) r[rp++] = ip; ip = (int)q; }
+  public void eval(long q) { push(q); execute(); inner(); }
 
   public byte peek() { 
     return block.get(ip); 
