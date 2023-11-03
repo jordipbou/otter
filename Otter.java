@@ -12,6 +12,7 @@ public class Otter {
   public int rp;
   public int ip;
 	public int err;
+	public boolean tr;
 
   public Otter() {
     s = new long[256];
@@ -20,6 +21,8 @@ public class Otter {
     rp = 0;
     ip = 0;
     extensions = new Consumer[26];
+		err = 0;
+		tr = false;
   }
 
   public void push(long a) {
@@ -81,6 +84,19 @@ public class Otter {
     long b = pop();
     push(a);
   }
+
+	public void pick() {
+		long n = pop();
+		push(s[sp - 1 - (int)n]);
+	}
+
+	public void to_r() {
+		r[rp++] = s[--sp];
+	}
+
+	public void from_r() {
+		s[sp++] = r[--rp];
+	}
   
   public void add() {
     long a = pop();
@@ -152,6 +168,11 @@ public class Otter {
     long b = pop();
     push(b > a ? -1L : 0L);
   }
+
+	public void zeq() {
+		long n = pop();
+		push(n == 0 ? -1 : 0);
+	}
 
   public void bfetch() {
     long a = pop();
@@ -319,7 +340,7 @@ public class Otter {
         break;
       default:
         switch (token()) {
-          case '0': push(0L); break;
+          //case '0': push(0L); break;
           case '1': push(1L); break;
           case '#': number(); break;
           case '\'': push((long)block.get(ip++)); break;
@@ -333,6 +354,10 @@ public class Otter {
           case 's': swap(); break;
           case 'r': rot(); break;
           case 'n': nip(); break;
+					case 'p': pick(); break;
+
+					case '(': to_r(); break;
+					case ')': from_r(); break;
 
           case '+': add(); break;
           case '-': sub(); break;
@@ -348,6 +373,7 @@ public class Otter {
           case '<': lt(); break;
           case '=': eq(); break;
           case '>': gt(); break;
+					case '0': zeq(); break;
 
           case '!': cstore(); break;
           case '@': cfetch(); break;
@@ -374,6 +400,10 @@ public class Otter {
           case 'k': key(); break;
 					//case 'a': accept(); break;
 					case 't': type(); break;
+
+					case 'c': push(8); break;
+					case 'u': tr = false; break;
+					case 'v': tr = true; break;
         }
     }
   }
@@ -381,7 +411,7 @@ public class Otter {
   public void inner() {
     int t = rp;
     while (t <= rp && ip < block.capacity()) {
-      trace(); System.out.println();
+      if (tr) { trace(); System.out.println(); }
       step();
       // Manage errors
     }
@@ -408,7 +438,6 @@ public class Otter {
     for (int i = 0; i < sp; i++) {
       System.out.printf("%d ", s[i]);
     }
-    System.out.printf("[%d]", ip);
 		if (ip < block.capacity()) {
 	    System.out.print(" : ");
 	    dump_code(ip);

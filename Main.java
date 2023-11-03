@@ -19,8 +19,17 @@ class Main {
     while (true) {
       String l = f.readLine();
       if (l == null) break;
+			System.out.printf("--> %s\n", l);
       s.evaluate(o, l);
-    }
+ 			if (o.err != 0) {
+				System.out.printf("ERROR: %d\n", o.err);
+				System.out.printf("IBUF: [%s]\n", s.ibuf.substring(s.ipos, s.ilen));
+				o.err = 0;
+				o.sp = 0;
+				o.rp = 0;
+				o.ip = o.block.capacity();
+			}
+   }
     } catch(IOException e) {}
     
       BufferedReader obj = 
@@ -32,8 +41,16 @@ class Main {
       System.out.print("> ");
       //o.isolated(obj.readLine());
       s.evaluate(o, obj.readLine());
-      s.trace(o);
-			System.out.println("Ok");
+			if (o.err != 0) {
+				System.out.printf("ERROR: %d\n", o.err);
+				o.err = 0;
+				o.sp = 0;
+				o.rp = 0;
+				o.ip = o.block.capacity();
+			} else {
+				o.trace();
+				System.out.println("Ok");
+			}
     } 
   }
 }

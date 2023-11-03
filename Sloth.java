@@ -6,12 +6,12 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 public class Sloth implements Consumer<Otter> {
+  public static byte NO_FLAGS = 0;
+  public static byte VARIABLE = 1;
+  public static byte HIDDEN = 2;
+  public static byte IMMEDIATE = 4;
+
   class Word {
-    public static byte NO_FLAGS = 0;
-    public static byte VARIABLE = 1;
-    public static byte HIDDEN = 2;
-    public static byte IMMEDIATE = 4;
-    
     public int code;
     public int codelen;
     public String name;
@@ -33,7 +33,10 @@ public class Sloth implements Consumer<Otter> {
   public void parse(Otter o) {
     char c = (char)o.pop();
     ipos++;
+		o.push(ipos);
     while (ipos < ilen && ibuf.charAt(ipos) != c) { ipos++; }
+		ipos++;
+		o.push(ipos - o.top());
   }
   
   public void parse_name(Otter o) {
@@ -50,7 +53,7 @@ public class Sloth implements Consumer<Otter> {
     int i = words.size() - 1;
     while (i >= 0) {
       Word w = words.get(i);
-      if (w.name.equals(name)) break;
+      if (w.name.equalsIgnoreCase(name)) break;
       i--;
     }
     o.push(t);
@@ -91,14 +94,13 @@ public class Sloth implements Consumer<Otter> {
       parse_name(o);
       long l = o.pop();
       long t = o.pop();
-      System.out.printf("Creating word: [%s]\n", ibuf.substring((int)t, (int)(t + l)));
       if (l == 0) { o.err = -16; return true; } // ZERO LENGTH NAME
       Word w = new Word();
       words.add(w);
       w.name = ibuf.substring((int)t, (int)(t + l));
       align(o);
       w.code = here;
-      w.flags = Word.HIDDEN;
+      w.flags = HIDDEN;
       state = true;
       return true; 
     }  else return false;
@@ -110,7 +112,7 @@ public class Sloth implements Consumer<Otter> {
       o.block.put(here++, (byte)']');
       Word w = words.get(words.size() - 1);
       state = false; 
-      w.flags = Word.NO_FLAGS;
+      w.flags = NO_FLAGS;
       w.codelen = here - w.code;
       return true; 
     } else return false;
@@ -176,7 +178,7 @@ public class Sloth implements Consumer<Otter> {
       if (o.top() != -1) {
         Word w = words.get((int)o.pop());
         o.drop(); o.drop();
-        if (!state || (w.flags & Word.IMMEDIATE) == Word.IMMEDIATE) {
+        if (!state || (w.flags & IMMEDIATE) == IMMEDIATE) {
           o.eval(w.code);
         } else {
           compile(o, w);
@@ -191,10 +193,18 @@ public class Sloth implements Consumer<Otter> {
       }
     }
   }
-  
+ 
+  public void immediate(Otter o) {
+		words.get(words.size() - 1).flags |= IMMEDIATE;
+	}
+
   public void accept(Otter o) {
     switch (o.token()) {
       case 'h': o.push(here); break;
+			case 'i': immediate(o); break;
+			case 'p': parse(o); break;
+			case 'n': parse_name(o); break;
+			case 'f': find_name(o); break;
     } 
   }
 
