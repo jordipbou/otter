@@ -20,7 +20,8 @@ public class Sloth implements Consumer<Otter> {
 
 	public static int pLATEST = Otter.pFREEZE + 4;
 	public static int pSTATE = pLATEST + 4;
-	public static int pIPOS = pSTATE + 4;
+	public static int pBASE = pSTATE + 4;
+	public static int pIPOS = pBASE + 4;
 	public static int pILEN = pIPOS + 4;
 	public static int pIBUF = pILEN + 4;
 	public static int pABUF = pIBUF + 256;
@@ -32,6 +33,7 @@ public class Sloth implements Consumer<Otter> {
 		o.block.putInt(o.pFREEZE, pARET + 1);
 		o.block.putInt(pLATEST, -1);
 		o.block.put(pARET, (byte)']');
+		o.block.putInt(pBASE, 10);
   }
 
   public void parse(Otter o) {
@@ -138,11 +140,13 @@ public class Sloth implements Consumer<Otter> {
 			for (int i = 0; i < l; i++) {
 				sb.append((char)o.block.get(t + i));
 			}
-			
-      BigDecimal n = new BigDecimal(sb.toString());
-      if (o.block.getInt(pSTATE) > 0) o.literal(n.intValueExact());
-			else o.push(n.intValueExact());
-    } catch (NumberFormatException | ArithmeticException e) {
+			Integer n = Integer.parseInt(sb.toString(), o.block.getInt(pBASE));
+			if (o.block.getInt(pSTATE) > 0) o.literal(n);
+			else o.push(n);
+      // BigDecimal n = new BigDecimal(sb.toString());
+      //if (o.block.getInt(pSTATE) > 0) o.literal(n.intValueExact());
+			//else o.push(n.intValueExact());
+    } catch (NumberFormatException e) {
       o.err = -13; // Undefined word
     }
   }
@@ -206,14 +210,33 @@ public class Sloth implements Consumer<Otter> {
 		o.bcompile((byte)'i');
 	}
 
+  public void see(Otter o) {
+		parse_name(o);
+		find_name(o);
+		o.nip(); o.nip();
+		int w = o.pop();
+		o.push(w + wNAME); o.push(o.block.get(w + wNAMELEN));
+		System.out.printf("[%d] : ", w);
+		Terminal.write(o);
+		System.out.print(" ");
+		o.dump_code(o.block.getInt(w + wCODE));
+		if ((o.block.get(w + wFLAGS) & IMMEDIATE) == IMMEDIATE) System.out.println("; immediate");
+		else System.out.println(";");
+	}
+
   public void accept(Otter o) {
     switch (o.token()) {
       //case 'h': o.push(here); break;
+			case 'c': int w = o.pop(); compile(o, w); break;
 			case 'i': immediate(o); break;
 			case 'p': parse(o); break;
 			case 'n': parse_name(o); break;
 			case 'f': find_name(o); break;
 			case 'r': recurse(o); break;
+			case 's': see(o); break;
+			case '(': o.block.putInt(pSTATE, 0); break;
+			case ')': o.block.putInt(pSTATE, 1); break;
+			case '?': o.push(o.block.getInt(pSTATE)); break;
     } 
   }
 

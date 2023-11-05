@@ -311,12 +311,17 @@ public class Otter {
 
   public void dump_code(int c) {
     int t = 1;
+		char k;
     while (t > 0 && c >= 0 && c < block.capacity()) {
-      switch (block.get(c)) {
-        case '{': case '[': t++; break;
-        case '}': case ']': t--; break;
+      switch (k = (char)block.get(c++)) {
+        case '{': case '[': t++; System.out.print(k); break;
+        case '}': case ']': t--; System.out.print(k); break;
+				case '\'': System.out.printf("#%d", block.get(c++)); break;
+				case '2': System.out.printf("#%d", block.getShort(c)); c += 2; break;
+				case '4': System.out.printf("#%d", block.getInt(c)); c += 4; break;
+				case 10: break;
+				default: System.out.print(k);	break;
       }
-      System.out.print((char)block.get(c++));
     }
   }
   

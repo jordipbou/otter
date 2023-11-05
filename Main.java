@@ -16,20 +16,21 @@ class Main {
         new InputStreamReader(
           new FileInputStream("ans.fth")));
 
-    //try {
-    //while (true) {
-    //  String l = f.readLine();
-    //  if (l == null) break;
-		//	System.out.printf("--> %s\n", l);
-    //  s.evaluate(o, l);
- 		//	if (o.err != 0) {
-		//		o.err = 0;
-		//		o.sp = 0;
-		//		o.rp = 0;
-		//		o.ip = o.block.capacity();
-		//	}
-    //}
-    //} catch(IOException e) {}
+    try {
+    while (true) {
+      String l = f.readLine();
+      if (l == null) break;
+			System.out.printf("--> %s\n", l);
+      s.evaluate(o, l);
+ 			if (o.err != 0) {
+				o.err = 0;
+				o.sp = 0;
+				o.rp = 0;
+				o.ip = o.block.capacity();
+			}
+			o.trace();
+    }
+    } catch(IOException e) {}
     
       BufferedReader obj = 
         new BufferedReader(
