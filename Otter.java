@@ -4,20 +4,24 @@ import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
 public class Otter {
+	public static int pSIZE = 0;
+	public static int pHERE = 4;
+	public static int pFREEZE = 8;
+
   public ByteBuffer block;
   public Consumer<Otter>[] extensions;
-  public long[] s;
+  public int[] s;
   public int sp;
-  public long[] r;
+  public int[] r;
   public int rp;
   public int ip;
 	public int err;
 	public boolean tr;
 
   public Otter() {
-    s = new long[256];
+    s = new int[256];
     sp = 0;
-    r = new long[256];
+    r = new int[256];
     rp = 0;
     ip = 0;
     extensions = new Consumer[26];
@@ -27,59 +31,61 @@ public class Otter {
 
 	public void init_block(int size) {
 		block = ByteBuffer.allocateDirect(size);
-		block.putInt(0, size);	// BLOCK SIZE
-		block.putInt(4, 8);			// HERE
+		block.putInt(pSIZE, size);						// BLOCK SIZE
+		block.putInt(pHERE, pFREEZE + 4);			// HERE
+		block.putInt(pFREEZE, pFREEZE + 4);		// FREEZE POINT
+		ip = block.capacity();
 	}
 
-	public int here() { return block.getInt(4); }
-	public void allot(int n) { block.putInt(4, block.getInt(4) + n); }
+	public int here() { return block.getInt(pHERE); }
+	public void allot(int n) { block.putInt(pHERE, block.getInt(pHERE) + n); }
+  public void align() { int h = block.getInt(pHERE); h = (h + 7) & ~(7); block.putInt(pHERE, h); }
+ 
+  public int T() { return s[sp - 1]; }
+  public int N() { return s[sp - 2]; }
+  public int NN() { return s[sp - 3]; }
 
-  public long T() { return s[sp - 1]; }
-  public long N() { return s[sp - 2]; }
-  public long NN() { return s[sp - 3]; }
-
-  public void push(long a) { s[sp++] = a; }
-  public long pop() { return s[--sp]; }
+  public void push(int a) { s[sp++] = a; }
+  public int pop() { return s[--sp]; }
   public void drop() { sp--; }
-  public void dup() { long a = pop(); push(a); push(a); }
-  public void over() { long a = pop(); long b = pop(); push(b); push(a); push(b); }
-  public void swap() { long a = pop(); long b = pop(); push(a); push(b); }
-  public void rot() { long a = pop(); long b = pop(); long c = pop(); push(b); push(a); push(c); }
-  public void nip() { long a = pop(); long b = pop(); push(a); }
-	public void pick() { long n = pop(); push(s[sp - 1 - (int)n]); }
+  public void dup() { int a = pop(); push(a); push(a); }
+  public void over() { int a = pop(); int b = pop(); push(b); push(a); push(b); }
+  public void swap() { int a = pop(); int b = pop(); push(a); push(b); }
+  public void rot() { int a = pop(); int b = pop(); int c = pop(); push(b); push(a); push(c); }
+  public void nip() { int a = pop(); int b = pop(); push(a); }
+	public void pick() { int n = pop(); push(s[sp - 1 - n]); }
 
 	public void to_r() { r[rp++] = s[--sp];	}
 	public void from_r() { s[sp++] = r[--rp];	}
   
-  public void add() { long a = pop(); long b = pop(); push(b + a); }
-  public void sub() { long a = pop(); long b = pop(); push(b - a); }
-  public void mul() { long a = pop(); long b = pop(); push(b * a); }
-  public void div() { long a = pop(); long b = pop(); push(b / a); }
-  public void mod() { long a = pop(); long b = pop(); push(b % a); }
+  public void add() { int a = pop(); int b = pop(); push(b + a); }
+  public void sub() { int a = pop(); int b = pop(); push(b - a); }
+  public void mul() { int a = pop(); int b = pop(); push(b * a); }
+  public void div() { int a = pop(); int b = pop(); push(b / a); }
+  public void mod() { int a = pop(); int b = pop(); push(b % a); }
 
-  public void and() { long a = pop(); long b = pop(); push(b & a); }
-  public void or() { long a = pop(); long b = pop(); push(a | b); }
-  public void xor() { long a = pop(); long b = pop(); push(b ^ a); }
-  public void invert() { long a = pop(); push(~a); }
+  public void and() { int a = pop(); int b = pop(); push(b & a); }
+  public void or() { int a = pop(); int b = pop(); push(a | b); }
+  public void xor() { int a = pop(); int b = pop(); push(b ^ a); }
+  public void invert() { int a = pop(); push(~a); }
 
-  public void lt() { long a = pop(); long b = pop(); push(b < a ? -1L : 0L); }
-  public void eq() { long a = pop(); long b = pop(); push(b == a ? -1L : 0L); }
-  public void gt() { long a = pop(); long b = pop(); push(b > a ? -1L : 0L); }
-	public void zeq() { long n = pop(); push(n == 0 ? -1 : 0); }
+  public void lt() { int a = pop(); int b = pop(); push(b < a ? -1 : 0); }
+  public void eq() { int a = pop(); int b = pop(); push(b == a ? -1 : 0); }
+  public void gt() { int a = pop(); int b = pop(); push(b > a ? -1 : 0); }
+	public void zeq() { int n = pop(); push(n == 0 ? -1 : 0); }
 
-  public void bfetch() { long a = pop(); push((long)block.get((int)a)); }
-  public void bstore() { long a = pop(); long b = pop(); block.put((int)a, (byte)b); }
+  public void bfetch() { int a = pop(); push((int)block.get(a)); }
+  public void bstore() { int a = pop(); int b = pop(); block.put(a, (byte)b); }
+  public void sfetch() { int a = pop(); push((int)block.getShort(a)); }
+  public void sstore() { int a = pop(); int b = pop(); block.putShort(a, (short)b); }
+  public void cfetch() { int a = pop(); push(block.getInt(a)); }
+  public void cstore() { int a = pop(); int b = pop(); block.putInt(a, b); }
 
-  public void sfetch() { long a = pop(); push((long)block.getShort((int)a)); }
-  public void sstore() { long a = pop(); long b = pop(); block.putShort((int)a, (short)b); }
+	public void bcompile(byte n) { block.put(here(), n); allot(1); }
+	public void scompile(short n) { block.putShort(here(), n); allot(2); }
+	public void ccompile(int n) { block.putInt(here(), n); allot(4); }
 
-  public void ifetch() { long a = pop(); push((long)block.getInt((int)a)); }
-  public void istore() { long a = pop(); long b = pop(); block.putInt((int)a, (int)b); }
-
-  public void cfetch() { long a = pop(); push(block.getLong((int)a)); }
-  public void cstore() { long a = pop(); long b = pop(); block.putLong((int)a, b); }
-
-	public void literal(long n) {
+	public void literal(int n) {
     if (n == 1) {
       block.put(here(), (byte)'1');
 			allot(1);
@@ -93,16 +99,11 @@ public class Otter {
 			allot(1);
       block.putShort(here(), (short)n);
       allot(2);
-    } else if (n >= -2147483648 && n <= 2147483647) {
+    } else {
       block.put(here(), (byte)'4');
 			allot(1);
-      block.putInt(here(), (int)n);
+      block.putInt(here(), n);
       allot(4);
-    } else {
-      block.put(here(), (byte)'8');
-			allot(1);
-      block.putLong(here(), (long)n);
-      allot(8);
     }
 	}
 
@@ -113,10 +114,16 @@ public class Otter {
       || block.get(ip) == '}';
   }
 
-  public void execute() { long q = pop(); if (!tail()) r[rp++] = ip; ip = (int)q; }
-  public void ret() { if (rp > 0) ip = (int)r[--rp]; else ip = block.capacity(); }
-  public void eval(long q) { push(q); execute(); inner(); }
-	public void quotation() { long d = pop(); push(ip); ip += d; }
+  public void execute() { int q = pop(); if (!tail()) r[rp++] = ip; ip = q; }
+	public void jump() { int d = pop(); ip += d; }
+	public void zjump() { int d = pop(); int b = pop(); if (b == 0) ip += d; }
+  public void ret() { if (rp > 0) ip = r[--rp]; else ip = block.capacity(); }
+  public void eval(int q) { push(q); execute(); inner(); }
+	public void quotation() { int d = pop(); push(ip); ip += d; }
+
+	public void fmark() { bcompile((byte)'2'); push(here()); scompile((short)0); }
+  public void fresolve() { int a = pop(); int d = here() - a - 3; block.putShort(a, (short)d); }
+
 	public void quit() { err = -256; }
 
   public void block() { 
@@ -150,19 +157,43 @@ public class Otter {
   }
 
   public void compare() {
-    long l2 = pop();
-    long s2 = pop();
-    long l1 = pop();
-    long s1 = pop();
-    // TODO
+    int l2 = pop();
+    int s2 = pop();
+    int l1 = pop();
+    int s1 = pop();
+    if (l1 != l2) push(0);
+		else {
+			for (int i = 0; i < l1; i++) {
+				if (block.get(s1 + i) != block.get(s2 + i)) { push(0); return; }
+			}
+			push(-1);
+		}
   }
 
+	public void compareWithoutCase() {
+		int l2 = pop();
+		int s2 = pop();
+	  int l1 = pop();
+		int s1 = pop();
+		if (l1 != l2) push(0);
+		else {
+			for (int i = 0; i < l1; i++) {
+				byte a = block.get(s1 + i);
+				byte b = block.get(s2 + i);
+				if (a >= 97 && a <= 122) a -= 32;
+				if (b >= 97 && b <= 122) b -= 32;
+				if (a != b) { push(0); return; }
+			}
+			push(-1);
+		}
+	}
+
   public void copy() {
-    long l = pop();
-    long d = pop();
-    long s = pop();
+    int l = pop();
+    int d = pop();
+    int s = pop();
     for (int i = 0; i < l; i++) {
-      block.put((int)d + i, block.get((int)s + i));
+      block.put(d + i, block.get(s + i));
     }
   }
 
@@ -188,12 +219,13 @@ public class Otter {
   	    break;
   	  default:
   	    switch (token()) {
-  	      case '1': push(1L); break;
+					case '$': bcompile(token()); break;
+
+  	      case '1': push(1); break;
   	      case '#': number(); break;
-  	      case '\'': push((long)block.get(ip++)); break;
-  	      case '2': push((long)block.getShort(ip)); ip += 2; break;
-  	      case '4': push((long)block.getInt(ip)); ip += 4; break;
-  	      case '8': push((long)block.getLong(ip)); ip += 8; break;
+  	      case '\'': push((int)block.get(ip++)); break;
+  	      case '2': push((int)block.getShort(ip)); ip += 2; break;
+  	      case '4': push(block.getInt(ip)); ip += 4; break;
   	        
   	      case '_': drop(); break;
   	      case 'd': dup(); break;
@@ -224,24 +256,32 @@ public class Otter {
 
   	      case '!': cstore(); break;
   	      case '@': cfetch(); break;
-  	        /*
-  	      case '`': istore(); break;
-  	      case '\'': ifetch(); break;
-  	      */
   	      case ',': sstore(); break;
   	      case '.': sfetch(); break;
   	      case ';': bstore(); break;
   	      case ':': bfetch(); break;
 
-					case 'l': long n = pop(); literal(n); break;
+					// TODO: bytecodes for bcompile, scompile and ccompile
+
+					case 'h': push(block.getInt(pHERE)); break;
+					case 'a': int n = pop(); allot((int)n); break;
+					case 'g': align(); break;
+
+					case 'l': n = pop(); literal(n); break;
 
 					case '[': quotation(); break;
   	      case '{': block(); break;
   	      case '}': case ']': ret(); break;
-  	      case 'x': execute(); break;
+  	      case 'i': execute(); break;
+					case 'j': jump(); break;
+					case 'z': zjump(); break;
+
+					case 'f': fmark(); break;
+					case 'b': fresolve(); break;
 
   	      case '"': string(); break;
   	      case 'm': compare(); break;
+					case 'w': compareWithoutCase(); break;
   	      case 'y': copy(); break;
 
 					case 'c': push(8); break;

@@ -2,8 +2,8 @@ import java.util.function.Consumer;
 
 public class Combinators implements Consumer<Otter> {
   public void ifte(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
+    int a = o.pop();
+    int b = o.pop();
     if (o.pop() == 0) {
       o.eval(a);
     } else {
@@ -12,9 +12,9 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void bi(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
     o.push(c);
     o.eval(b);
     o.push(c);
@@ -22,10 +22,10 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void bi2(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
-    long d = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
+    int d = o.pop();
     o.push(d);
     o.push(c);
     o.eval(b);
@@ -35,11 +35,11 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void bi3(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
-    long d = o.pop();
-    long e = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
+    int d = o.pop();
+    int e = o.pop();
     o.push(e);
     o.push(d);
     o.push(c);
@@ -51,26 +51,26 @@ public class Combinators implements Consumer<Otter> {
   }
   
   public void dip(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
+    int a = o.pop();
+    int b = o.pop();
     o.eval(a);
     o.push(b);
   }
 
   public void dip2(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
     o.eval(a);
     o.push(c);
     o.push(b);
   }
 
   public void dip3(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
-    long d = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
+    int d = o.pop();
     o.eval(a);
     o.push(d);
     o.push(c);
@@ -78,11 +78,11 @@ public class Combinators implements Consumer<Otter> {
   }
   
   public void dip4(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
-    long d = o.pop();
-    long e = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
+    int d = o.pop();
+    int e = o.pop();
     o.eval(a);
     o.push(e);
     o.push(d);
@@ -91,17 +91,17 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void keep(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
+    int a = o.pop();
+    int b = o.pop();
     o.push(b);
     o.eval(a);
     o.push(b);
   }
 
   public void keep2(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
     o.push(c);
     o.push(b);
     o.eval(a);
@@ -110,10 +110,10 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void keep3(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
-    long d = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
+    int d = o.pop();
     o.push(d);
     o.push(c);
     o.push(b);
@@ -124,14 +124,14 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void times(Otter o) {
-    long q = o.pop();
-    long n = o.pop();
+    int q = o.pop();
+    int n = o.pop();
     while (n-- > 0) {
       o.eval(q);
     }
   }
 
-  public void _binrec(Otter o, long a, long b, long c, long d) {
+  public void _binrec(Otter o, int a, int b, int c, int d) {
     o.eval(a);
     if (o.pop() != 0) {
       o.eval(b);
@@ -145,14 +145,14 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void binrec(Otter o) {
-    long d = o.pop();
-    long c = o.pop();
-    long b = o.pop();
-    long a = o.pop();
+    int d = o.pop();
+    int c = o.pop();
+    int b = o.pop();
+    int a = o.pop();
     _binrec(o, a, b, c, d);
   }
 
-  public void _linrec(Otter o, long a, long b, long c, long d) {
+  public void _linrec(Otter o, int a, int b, int c, int d) {
     o.eval(d);
     if (o.pop() != 0) {
       o.eval(c);
@@ -164,33 +164,33 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void linrec(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
-    long c = o.pop();
-    long d = o.pop();
+    int a = o.pop();
+    int b = o.pop();
+    int c = o.pop();
+    int d = o.pop();
     _linrec(o, a, b, c, d);
   }
   
-  public void _primrec(Otter o, long a, long b) {
-    long n = o.pop();
+  public void _primrec(Otter o, int a, int b) {
+    int n = o.pop();
     if (n == 0) {
       o.eval(b);
     } else {
       o.push(n);
-      o.push(n - 1L);
+      o.push(n - 1);
       _primrec(o, a, b);
       o.eval(a);
     }
   }
   
   public void primrec(Otter o) {
-    long a = o.pop();
-    long b = o.pop();
+    int a = o.pop();
+    int b = o.pop();
     _primrec(o, a, b);
   }
 
   public void until(Otter o) {
-    long a = o.pop();
+    int a = o.pop();
     do {
       o.eval(a);
       if (o.pop() == 0) break;
@@ -198,7 +198,7 @@ public class Combinators implements Consumer<Otter> {
   }
 
   public void _while(Otter o) {
-    long a = o.pop();
+    int a = o.pop();
     do {
       o.eval(a);
       if (o.pop() != 0) break;
