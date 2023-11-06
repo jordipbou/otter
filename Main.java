@@ -2,7 +2,6 @@ import java.io.*;
 
 class Main {
   public static void main(String[] args) throws IOException {
-    
     Otter o = new Otter();
     Sloth s = new Sloth(o, 65536);
     

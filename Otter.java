@@ -76,11 +76,17 @@ public class Otter {
 
   public void bfetch() { int a = pop(); push((int)block.get(a)); }
   public void bstore() { int a = pop(); int b = pop(); block.put(a, (byte)b); }
-  public void sfetch() { int a = pop(); push((int)block.getShort(a)); }
-  public void sstore() { int a = pop(); int b = pop(); block.putShort(a, (short)b); }
+  public void wfetch() { int a = pop(); push((int)block.getShort(a)); }
+  public void wstore() { int a = pop(); int b = pop(); block.putShort(a, (short)b); }
+  public void lfetch() { int a = pop(); push(block.getInt(a)); }
+  public void lstore() { int a = pop(); int b = pop(); block.putInt(a, b); }
+	// If a 32 bit system, cfetch and cstore its equivalent to lfetch and lstore
   public void cfetch() { int a = pop(); push(block.getInt(a)); }
   public void cstore() { int a = pop(); int b = pop(); block.putInt(a, b); }
 
+	// These ones don't need to be bytecodes (they're very easily replicated from here / allot
+	// and store. But are practical for the API.
+	// Not every function must be a bytecode  if it can be easily replicated !!
 	public void bcompile(byte n) { block.put(here(), n); allot(1); }
 	public void scompile(short n) { block.putShort(here(), n); allot(2); }
 	public void ccompile(int n) { block.putInt(here(), n); allot(4); }
@@ -121,7 +127,7 @@ public class Otter {
   public void eval(int q) { push(q); execute(); inner(); }
 	public void quotation() { int d = pop(); push(ip); ip += d; }
 
-	public void fmark() { bcompile((byte)'2'); push(here()); scompile((short)0); }
+	// public void fmark() { bcompile((byte)'2'); push(here()); scompile((short)0); }
   public void fresolve() { int a = pop(); int d = here() - a - 3; block.putShort(a, (short)d); }
 
 	public void quit() { err = -256; }
@@ -256,12 +262,12 @@ public class Otter {
 
   	      case '!': cstore(); break;
   	      case '@': cfetch(); break;
-  	      case ',': sstore(); break;
-  	      case '.': sfetch(); break;
-  	      case ';': bstore(); break;
-  	      case ':': bfetch(); break;
-
-					// TODO: bytecodes for bcompile, scompile and ccompile
+					case '`': lstore(); break;
+					case '\\': lfetch(); break;
+  	      case ';': wstore(); break;
+  	      case ':': wfetch(); break;
+  	      case ',': bstore(); break;
+  	      case '.': bfetch(); break;
 
 					case 'h': push(block.getInt(pHERE)); break;
 					case 'a': int n = pop(); allot((int)n); break;
@@ -276,7 +282,7 @@ public class Otter {
 					case 'j': jump(); break;
 					case 'z': zjump(); break;
 
-					case 'f': fmark(); break;
+					// case 'f': fmark(); break;
 					case 'b': fresolve(); break;
 
   	      case '"': string(); break;

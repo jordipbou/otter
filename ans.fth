@@ -57,10 +57,14 @@
 
 \ Memory manipulation primitives
 
+: C! ( char c-addr -- ) $, ;
+: C@ ( c-addr -- char ) $. ;
+: W! ( w16 w-addr -- ) $; ;
+: W@ ( w-addr -- w16 ) $: ;
+\ : L! ( l32 l-addr -- ) 
+\ : L@ ( l-addr -- l32 )
 : ! ( x a-addr -- ) $! ;
 : @ ( a-addr -- x ) $@ ;
-: C! ( char c-addr -- ) $; ;
-: C@ ( c-addr -- char ) $: ;
 
 : CELL ( -- n ) $c ;
 : CELL+ ( a-addr1 -- a-addr2) cell + ;
@@ -72,6 +76,7 @@
 : ALIGNED ( addr -- a-addr ) cell 1- dup invert swap rot + and ;
 
 : C, ( char -- ) here 1 allot c! ;
+: W, ( w16 -- ) here 2 allot w! ;
 : , ( x -- ) here cell allot ! ;
 
 \ Input/Output
@@ -117,7 +122,8 @@
 : ] $S) ; immediate
 : [ $S( ; immediate
 
-: >MARK $f ;
+\ : >MARK $f ;
+: >MARK 2 c, here 0 w, ;
 : >RESOLVE $b ;
 : 0BRANCH $z ;
 : JUMP $j ;
@@ -137,6 +143,6 @@
 
 : STATE $S? ;
 
-: ABS ( n -- u ) dup 0< if negate then ;
+\ : ABS ( n -- u ) dup 0< if negate then ;
 
 : RECURSE $Sr ; immediate
