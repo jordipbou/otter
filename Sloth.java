@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 public class Sloth implements Consumer<Otter> {
+  /*
   public static byte NO_FLAGS = 0;
   public static byte VARIABLE = 1;
   public static byte HIDDEN = 2;
@@ -157,16 +158,14 @@ public class Sloth implements Consumer<Otter> {
 		o.push(code); o.push(o.here()); o.push(code_len - 1);
 		o.copy();
 		o.allot(code_len - 1);
-		/*
-    if (w.codelen < 4) {
-      for (int i = 0; i < w.codelen - 1; i++) {
-        o.block.put(here++, o.block.get(w.code + i));
-      }
-    } else {
-      o.literal(w.code);
-      o.block.put(here++, (byte)'i');
-    }
-		*/
+    // if (w.codelen < 4) {
+    //   for (int i = 0; i < w.codelen - 1; i++) {
+    //     o.block.put(here++, o.block.get(w.code + i));
+    //   }
+    // } else {
+    //   o.literal(w.code);
+    //   o.block.put(here++, (byte)'i');
+    // }
   }
  
   public void evaluate(Otter o, String s) {
@@ -223,28 +222,19 @@ public class Sloth implements Consumer<Otter> {
 		if ((o.block.get(w + wFLAGS) & IMMEDIATE) == IMMEDIATE) System.out.println("; immediate");
 		else System.out.println(";");
 	}
-
+*/
   public void accept(Otter o) {
     switch (o.token()) {
-      //case 'h': o.push(here); break;
-			case 'c': int w = o.pop(); compile(o, w); break;
-			case 'i': immediate(o); break;
-			case 'p': parse(o); break;
-			case 'n': parse_name(o); break;
-			case 'f': find_name(o); break;
-			case 'r': recurse(o); break;
-			case 's': see(o); break;
-			case '(': o.block.putInt(pSTATE, 0); break;
-			case ')': o.block.putInt(pSTATE, 1); break;
-			case '?': o.push(o.block.getInt(pSTATE)); break;
+			// case 'c': int w = o.pop(); compile(o, w); break;
+			// case 'i': immediate(o); break;
+			// case 'p': parse(o); break;
+			// case 'n': parse_name(o); break;
+			// case 'f': find_name(o); break;
+			// case 'r': recurse(o); break;
+			// case 's': see(o); break;
+			// case '(': o.block.putInt(pSTATE, 0); break;
+			// case ')': o.block.putInt(pSTATE, 1); break;
+			// case '?': o.push(o.block.getInt(pSTATE)); break;
     } 
   }
-
-/*
-  public void trace(Otter o) {
-    System.out.printf("[%b] ", state);
-    o.trace();
-    System.out.printf("<%s>\n", ibuf.substring(ipos, ilen));
-  }
-*/
 }

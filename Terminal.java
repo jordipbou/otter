@@ -2,6 +2,7 @@ import java.util.function.Consumer;
 import java.io.IOException;
 
 public class Terminal implements Consumer<Otter> {
+  /*
 	public static void dot(Otter o) {
 		System.out.printf("%d ", o.pop());
 	}
@@ -40,14 +41,14 @@ public class Terminal implements Consumer<Otter> {
 			o.push(0);
 		}
 	}
-
+*/
 	public void accept(Otter o) {
 		switch (o.token()) {
-			case '.': dot(o); break;
-			case 'e': emit(o); break;
-			case 'k': key(o); break;
-			case 't': write(o); break;
-			case 'a': read(o); break;
+			// case '.': dot(o); break;
+			// case 'e': emit(o); break;
+			// case 'k': key(o); break;
+			// case 't': write(o); break;
+			// case 'a': read(o); break;
 		}
 	}
 }

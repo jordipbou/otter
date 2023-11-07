@@ -2,6 +2,11 @@ import java.io.*;
 
 class Main {
   public static void main(String[] args) throws IOException {
+    Machine m = new Machine();
+    Otter o = new Otter(m);
+
+    m.extensions['E' - 'A'] = x -> { int c = x.pop(); System.out.print((char)c); };
+/*
     Otter o = new Otter();
     Sloth s = new Sloth(o, 65536);
     
@@ -9,7 +14,7 @@ class Main {
     o.extensions['C' - 'A'] = new Combinators();
     o.extensions['S' - 'A'] = s;
 		o.extensions['T' - 'A'] = new Terminal();
-
+    
     BufferedReader f =
       new BufferedReader(
         new InputStreamReader(
@@ -30,25 +35,25 @@ class Main {
 			o.trace();
     }
     } catch(IOException e) {}
-    
-      BufferedReader obj = 
-        new BufferedReader(
-          new InputStreamReader(
-            System.in)); 
+    */
+    BufferedReader obj = 
+      new BufferedReader(
+        new InputStreamReader(
+          System.in)); 
    
 		o.tr = true;
 
     while (true) {
       System.out.print("> ");
-      //o.isolated(obj.readLine());
-      s.evaluate(o, obj.readLine());
+      o.asm(obj.readLine());
+      //s.evaluate(o, obj.readLine());
 			if (o.err != 0) {
 				if (o.err == -256) System.exit(0);
 				System.out.printf("ERROR: %d\n", o.err);
 				o.err = 0;
 				o.sp = 0;
 				o.rp = 0;
-				o.ip = o.block.capacity();
+				o.ip = o.machine.dict.size();
 			} else {
 				o.trace();
 				System.out.println("Ok");

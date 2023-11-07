@@ -4,12 +4,7 @@ import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
 public class Otter {
-	public static int pSIZE = 0;
-	public static int pHERE = 4;
-	public static int pFREEZE = 8;
-
-  public ByteBuffer block;
-  public Consumer<Otter>[] extensions;
+  public Machine machine;
   public int[] s;
   public int sp;
   public int[] r;
@@ -17,30 +12,18 @@ public class Otter {
   public int ip;
 	public int err;
 	public boolean tr;
-
-  public Otter() {
+  
+  public Otter(Machine m) {
+    machine = m;
     s = new int[256];
     sp = 0;
     r = new int[256];
     rp = 0;
     ip = 0;
-    extensions = new Consumer[26];
 		err = 0;
-		tr = false;
+		tr = false;  
   }
-
-	public void init_block(int size) {
-		block = ByteBuffer.allocateDirect(size);
-		block.putInt(pSIZE, size);						// BLOCK SIZE
-		block.putInt(pHERE, pFREEZE + 4);			// HERE
-		block.putInt(pFREEZE, pFREEZE + 4);		// FREEZE POINT
-		ip = block.capacity();
-	}
-
-	public int here() { return block.getInt(pHERE); }
-	public void allot(int n) { block.putInt(pHERE, block.getInt(pHERE) + n); }
-  public void align() { int h = block.getInt(pHERE); h = (h + 7) & ~(7); block.putInt(pHERE, h); }
- 
+  
   public int T() { return s[sp - 1]; }
   public int N() { return s[sp - 2]; }
   public int NN() { return s[sp - 3]; }
@@ -73,69 +56,27 @@ public class Otter {
   public void eq() { int a = pop(); int b = pop(); push(b == a ? -1 : 0); }
   public void gt() { int a = pop(); int b = pop(); push(b > a ? -1 : 0); }
 	public void zeq() { int n = pop(); push(n == 0 ? -1 : 0); }
-
-  public void bfetch() { int a = pop(); push((int)block.get(a)); }
-  public void bstore() { int a = pop(); int b = pop(); block.put(a, (byte)b); }
-  public void wfetch() { int a = pop(); push((int)block.getShort(a)); }
-  public void wstore() { int a = pop(); int b = pop(); block.putShort(a, (short)b); }
-  public void lfetch() { int a = pop(); push(block.getInt(a)); }
-  public void lstore() { int a = pop(); int b = pop(); block.putInt(a, b); }
-	// If a 32 bit system, cfetch and cstore its equivalent to lfetch and lstore
-  public void cfetch() { int a = pop(); push(block.getInt(a)); }
-  public void cstore() { int a = pop(); int b = pop(); block.putInt(a, b); }
-
-	// These ones don't need to be bytecodes (they're very easily replicated from here / allot
-	// and store. But are practical for the API.
-	// Not every function must be a bytecode  if it can be easily replicated !!
-	public void bcompile(byte n) { block.put(here(), n); allot(1); }
-	public void scompile(short n) { block.putShort(here(), n); allot(2); }
-	public void ccompile(int n) { block.putInt(here(), n); allot(4); }
-
-	public void literal(int n) {
-    if (n == 1) {
-      block.put(here(), (byte)'1');
-			allot(1);
-    } else if (n >= -128 && n <= 127) {
-      block.put(here(), (byte)'\'');
-			allot(1);
-      block.put(here(), (byte)n);
-			allot(1);
-    } else if (n >= -32768 && n <= 32767) {
-      block.put(here(), (byte)'2');
-			allot(1);
-      block.putShort(here(), (short)n);
-      allot(2);
-    } else {
-      block.put(here(), (byte)'4');
-			allot(1);
-      block.putInt(here(), n);
-      allot(4);
-    }
-	}
-
+  
   public boolean tail() {
     return
-      ip >= block.capacity()
-      || block.get(ip) == ']'
-      || block.get(ip) == '}';
+      ip >= machine.dict.size()
+      || machine.dict.fetch_byte(ip) == ']'
+      || machine.dict.fetch_byte(ip) == '}';
   }
 
   public void execute() { int q = pop(); if (!tail()) r[rp++] = ip; ip = q; }
 	public void jump() { int d = pop(); ip += d; }
 	public void zjump() { int d = pop(); int b = pop(); if (b == 0) ip += d; }
-  public void ret() { if (rp > 0) ip = r[--rp]; else ip = block.capacity(); }
+  public void ret() { if (rp > 0) ip = r[--rp]; else ip = machine.dict.size(); }
   public void eval(int q) { push(q); execute(); inner(); }
 	public void quotation() { int d = pop(); push(ip); ip += d; }
-
-	// public void fmark() { bcompile((byte)'2'); push(here()); scompile((short)0); }
-  public void fresolve() { int a = pop(); int d = here() - a - 3; block.putShort(a, (short)d); }
-
+  
 	public void quit() { err = -256; }
 
   public void block() { 
 	  push(ip);
     int t = 1;
-    while (t > 0 && ip < block.capacity()) {
+    while (t > 0 && ip < machine.dict.size()) {
       switch (token()) {
         case '{': case '[': t++; break;
         case '}': case ']': t--; break;
@@ -145,7 +86,7 @@ public class Otter {
 
   public void number() {
     int n = 0;
-    while (ip < block.capacity()) {
+    while (ip < machine.dict.size()) {
       byte c = peek();
       if (c >= '0' && c <= '9') {
         n = n * 10 + c - '0';
@@ -158,11 +99,11 @@ public class Otter {
   public void string() {
     int c = 0;
     push(ip);
-    while (ip < block.capacity() && token() != '"') { c++; }
+    while (ip < machine.dict.size() && token() != '"') { c++; }
     push(c); 
   }
 
-  public void compare() {
+  public void compare(boolean withoutCase) {
     int l2 = pop();
     int s2 = pop();
     int l1 = pop();
@@ -170,43 +111,29 @@ public class Otter {
     if (l1 != l2) push(0);
 		else {
 			for (int i = 0; i < l1; i++) {
-				if (block.get(s1 + i) != block.get(s2 + i)) { push(0); return; }
-			}
+				byte a = machine.dict.fetch_byte(s1 + i);
+				byte b = machine.dict.fetch_byte(s2 + i);
+				if (withoutCase && a >= 97 && a <= 122) a -= 32;
+				if (withoutCase && b >= 97 && b <= 122) b -= 32;
+				if (a != b) { push(0); return; }			}
 			push(-1);
 		}
   }
-
-	public void compareWithoutCase() {
-		int l2 = pop();
-		int s2 = pop();
-	  int l1 = pop();
-		int s1 = pop();
-		if (l1 != l2) push(0);
-		else {
-			for (int i = 0; i < l1; i++) {
-				byte a = block.get(s1 + i);
-				byte b = block.get(s2 + i);
-				if (a >= 97 && a <= 122) a -= 32;
-				if (b >= 97 && b <= 122) b -= 32;
-				if (a != b) { push(0); return; }
-			}
-			push(-1);
-		}
-	}
 
   public void copy() {
     int l = pop();
     int d = pop();
     int s = pop();
     for (int i = 0; i < l; i++) {
-      block.put(d + i, block.get(s + i));
+      machine.dict.store_byte(d + i, machine.dict.fetch_byte(s + i));
     }
   }
-
-  public byte peek() { return block.get(ip); }
-  public byte token() { return block.get(ip++); }
+  
+  public byte peek() { return machine.dict.fetch_byte(ip); }
+  public byte token() { return machine.dict.fetch_byte(ip++); }
 
   public void step() {
+    int a, n;
 		switch (peek()) {
   	  case 'A': case 'B':
   	  case 'C': case 'D':
@@ -221,17 +148,17 @@ public class Otter {
   	  case 'U': case 'V':
   	  case 'W': case 'X':
   	  case 'Y': case 'Z':
-  	    extensions[(char)token() - 'A'].accept(this);
+  	    machine.extensions[(char)token() - 'A'].accept(this);
   	    break;
   	  default:
   	    switch (token()) {
-					case '$': bcompile(token()); break;
+					case '$': machine.dict.compile_byte(token()); break;
 
   	      case '1': push(1); break;
   	      case '#': number(); break;
-  	      case '\'': push((int)block.get(ip++)); break;
-  	      case '2': push((int)block.getShort(ip)); ip += 2; break;
-  	      case '4': push(block.getInt(ip)); ip += 4; break;
+  	      case '\'': push((int)machine.dict.fetch_byte(ip++)); break;
+  	      case '2': push((int)machine.dict.fetch_short(ip)); ip += 2; break;
+  	      case '4': push(machine.dict.fetch_int(ip)); ip += 4; break;
   	        
   	      case '_': drop(); break;
   	      case 'd': dup(); break;
@@ -260,20 +187,20 @@ public class Otter {
   	      case '>': gt(); break;
 					case '0': zeq(); break;
 
-  	      case '!': cstore(); break;
-  	      case '@': cfetch(); break;
-					case '`': lstore(); break;
-					case '\\': lfetch(); break;
-  	      case ';': wstore(); break;
-  	      case ':': wfetch(); break;
-  	      case ',': bstore(); break;
-  	      case '.': bfetch(); break;
+  	      case '!': a = pop(); n = pop(); machine.dict.store_int(a, n); break;
+  	      case '@': a = pop(); push(machine.dict.fetch_int(a)); break;
+					case '`': a = pop(); n = pop(); machine.dict.store_int(a, n); break;
+					case '\\': a = pop(); push(machine.dict.fetch_int(a)); break;
+  	      case ';': a = pop(); n = pop(); machine.dict.store_short(a, (short)n); break;
+  	      case ':': a = pop(); push(machine.dict.fetch_short(a)); break;
+  	      case ',': a = pop(); n = pop(); machine.dict.store_byte(a, (byte)n); break;
+  	      case '.': a = pop(); push(machine.dict.fetch_byte(a)); break;
 
-					case 'h': push(block.getInt(pHERE)); break;
-					case 'a': int n = pop(); allot((int)n); break;
-					case 'g': align(); break;
+					case 'h': push(machine.dict.here()); break;
+					case 'a': n = pop(); machine.dict.allot((int)n); break;
+					case 'g': machine.dict.align(); break;
 
-					case 'l': n = pop(); literal(n); break;
+					case 'l': n = pop(); machine.dict.store_literal(n); break;
 
 					case '[': quotation(); break;
   	      case '{': block(); break;
@@ -282,49 +209,78 @@ public class Otter {
 					case 'j': jump(); break;
 					case 'z': zjump(); break;
 
-					// case 'f': fmark(); break;
-					case 'b': fresolve(); break;
-
   	      case '"': string(); break;
-  	      case 'm': compare(); break;
-					case 'w': compareWithoutCase(); break;
+  	      case 'm': compare(false); break;
+					case 'w': compare(true); break;
   	      case 'y': copy(); break;
 
-					case 'c': push(8); break;
+					case 'c': push(4); break;
 
 					case 'u': tr = false; break;
 					case 'v': tr = true; break;
 
 					case 'q': quit(); break;
+
+          case 'x':
+            switch (token()) {
+              case 'e':
+                switch (token()) {
+                  case '@': push(err); break;
+                  case '!': err = pop(); break;
+                }
+                break;
+              case 'i':
+                switch (token()) {
+                  case '@': push(ip); break;
+                  case '!': ip = pop(); break;
+                }
+                break;
+              case 's':
+                switch (token()) {
+                  case '@': push(sp); break;
+                  case '!': sp = pop(); break;
+                }
+                break;
+              case 'r':
+                switch (token()) {
+                  case '@': push(rp); break;
+                  case '!': rp = pop(); break;
+                }
+                break;
+            }
+            break;
   	    }
 		}
   }
   
   public void inner() {
     int t = rp;
-    while (t <= rp && ip < block.capacity()) {
+    while (t <= rp && ip < machine.dict.size()) {
       if (tr) { trace(); System.out.println(); }
       step();
       // Manage errors
     }
   }
   
-  public void isolated(String s) {
-    block = ByteBuffer.wrap(s.getBytes(Charset.forName("UTF-8")));
-    ip = 0;
+  public void asm(String s) {
+    int l = s.length();
+    for (int i = 0; i < l; i++) {
+      machine.dict.store_byte(machine.dict.size() - l + i, (byte)s.charAt(i));
+    }
+    ip = machine.dict.size() - l;
     inner();
   }
 
   public void dump_code(int c) {
     int t = 1;
 		char k;
-    while (t > 0 && c >= 0 && c < block.capacity()) {
-      switch (k = (char)block.get(c++)) {
+    while (t > 0 && c >= 0 && c < machine.dict.size()) {
+      switch (k = (char)machine.dict.fetch_byte(c++)) {
         case '{': case '[': t++; System.out.print(k); break;
         case '}': case ']': t--; System.out.print(k); break;
-				case '\'': System.out.printf("#%d", block.get(c++)); break;
-				case '2': System.out.printf("#%d", block.getShort(c)); c += 2; break;
-				case '4': System.out.printf("#%d", block.getInt(c)); c += 4; break;
+				case '\'': System.out.printf("#%d", machine.dict.fetch_byte(c++)); break;
+				case '2': System.out.printf("#%d", machine.dict.fetch_short(c)); c += 2; break;
+				case '4': System.out.printf("#%d", machine.dict.fetch_int(c)); c += 4; break;
 				case 10: break;
 				default: System.out.print(k);	break;
       }
@@ -335,7 +291,7 @@ public class Otter {
     for (int i = 0; i < sp; i++) {
       System.out.printf("%d ", s[i]);
     }
-		if (ip < block.capacity()) {
+		if (ip < machine.dict.size()) {
 	    System.out.print(" : ");
 	    dump_code(ip);
 		}
