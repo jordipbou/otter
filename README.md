@@ -1,4 +1,9 @@
-# Bytecodes
+## Memory
+
+-MEM_SIZE :: -1 => Context memory
+0 :: DATA_SIZE => Data memory
+
+## Bytecodes
 
 	  (< 32) -> noop
     (SPACE) -> noop
