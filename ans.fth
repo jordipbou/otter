@@ -6,14 +6,15 @@
 : NIP $n ;
 : PICK $p ;
 
-: >R $( ;
-: R> $) ;
-: R@ $f ;
-
-: -ROT rot rot ;
-: 3DUP 2 pick 2 pick 2 pick ;
-: 2DROP drop drop ;
-: TUCK swap over ;
+: >R $t ;
+: R> $f ;
+: R@ $u ;
+: U $u ;
+: V $v ;
+: W $w ;
+: X $x ;
+: Y $y ;
+: Z $z ;
 
 : + $+ ;
 : - $- ;
@@ -21,28 +22,18 @@
 : / $/ ;
 : MOD $% ;
 
-: 1+ 1 + ;
-: 1- 1 - ;
-
 : < $< ;
 : = $= ;
 : > $> ;
 : 0= $0 ;
-
-: <= > 0= ;
-: >= < 0= ;
-
-: 0< 0 < ;
-: 0> 0 > ;
-: 0<> 0= 0= ;
 
 : AND $& ;
 : OR $| ;
 : XOR $^ ;
 : INVERT $~ ;
 
-: NOT 0= ;
-: NEGATE 0 swap - ;
+: LSHIFT $( ;
+: RSHIFT $) ;
 
 : C! $, ;
 : C@ $. ;
@@ -52,46 +43,56 @@
 : @ $@ ;
 
 : CELL $c ;
-: CELL+ cell + ;
-: CELLS cell * ;
 
 : HERE $h ;
 : ALLOT $a ;
 : ALIGN $g ;
-: ALIGNED cell 1- dup invert swap rot + and ;
 
-: C, here 1 allot c! ;
-: W, here 2 allot w! ;
-: , here cell allot ! ;
+: DUMP $` ;
 
 : EMIT $E ;
-
-: BL 32 ;
-: CR 10 emit ;
+: KEY $K ;
 
 : EXECUTE $i ;
-: BYE $q ;
-
-: 0BRANCH $z ;
+: 0BRANCH $? ;
 : BRANCH $j ;
+: BYE $q ;
+: EXIT $\ ;
 
+: C, here c! 1 allot ;
+: W, here w! 2 allot ;
+: , here ! cell allot ;
+
+: BLOCK-BASE 0 ;
+: BLOCK-SIZE@ block-base 0 + ;
+: LATEST@ block-size@ cell + ;
+: INTERPRETER@ latest@ cell + ;
+: STATE interpreter@ cell + ;
+: IBUF@ state cell + ;
+: IPOS@ ibuf@ 256 + ;
+: ILEN@ ipos@ cell + ;
+
+: SOURCE IBUF@ ILEN@ @ ;
+
+: NAME>INTERPRET cell + @ ;
+: NAME>FLAGS@ cell + cell + ;
+: NAME>STRING cell + cell + 1 + dup c@ swap 1 + swap ;
+
+: LATEST latest@ @ ;
 : FLAG-IMMEDIATE 2 ;
+: IMMEDIATE latest name>flags@ dup c@ flag-immediate or swap c! ;
 
-: LATEST $e ;
-: PARSE-NAME $x ;
-: FIND-NAME $y ;
-: LITERAL $l ;
+: >MARK 50 c, here 0 w, ; 
+: >RESOLVE dup here swap - 3 - swap w! ; 
+: <MARK here ;
+: <RESOLVE 50 c, here - 3 - w, ;
 
-: IMMEDIATE latest 8 + dup c@ flag-immediate or swap c! ;
-: COMPILE, $w ;
-: POSTPONE parse-name find-name nip nip literal $$w ; immediate
-
-: >MARK 50 c, here 0 w, ;
-: >RESOLVE dup here swap - 3 - swap w! ;
-
-: IF >mark postpone 0branch ; immediate
+: IF >mark $$? ; immediate
+: ELSE >mark $$j swap >resolve ; immediate
 : THEN >resolve ; immediate
-: ELSE >mark postpone branch swap >resolve ; immediate
 
-: ' $D' ;
-: SEE $Ds ;
+: BEGIN <mark ; immediate
+: AGAIN <resolve $$j ; immediate
+: UNTIL >mark $$?$\ >resolve <resolve $$j ; immediate
+
+: TYPE begin over c@ emit swap 1 + swap 1 - dup 0= until ;

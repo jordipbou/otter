@@ -19,15 +19,13 @@ class Main {
       System.out.printf("--> %s\n", l);
       d.evaluate(l);
       if (d.err != 0) {
-        d.err = 0;
-        d.sp = 0;
-        d.rp = 0;
-        d.ip = d.d.capacity();
+				System.out.printf("ERROR:%d\n", d.err);
+				System.exit(-1);
       }
       d.trace();
     }
     } catch(IOException e) {}
-    
+
     BufferedReader obj = 
       new BufferedReader(
         new InputStreamReader(
