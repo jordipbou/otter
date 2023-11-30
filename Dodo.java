@@ -126,12 +126,14 @@ public class Dodo {
 
 					case 't': r[rp++] = s[--sp]; break;
 					case 'f': s[sp++] = r[--rp]; break;
+					/*
           case 'u': push(r[rp - 1]); break;
 					case 'v': push(r[rp - 2]); break;
 					case 'w': push(r[rp - 3]); break;
 					case 'x': push(r[rp - 4]); break;
 					case 'y': push(r[rp - 5]); break;
 					case 'z': push(r[rp - 6]); break;
+					*/
 
   	      case '+': s[sp - 2] = s[sp - 2] + s[sp - 1]; sp--; break;
   	      case '-': s[sp - 2] = s[sp - 2] - s[sp - 1]; sp--; break;
@@ -143,6 +145,12 @@ public class Dodo {
   	      case '=': s[sp - 2] = s[sp - 2] == s[sp - 1] ? -1 : 0; sp--; break;
   	      case '>': s[sp - 2] = s[sp - 2] > s[sp - 1] ? -1 : 0; sp--; break;
 					case '0': s[sp - 1] = s[sp - 1] == 0 ? -1 : 0; break;
+
+					case 'u':
+						switch (token()) {
+							case '<': a = pop(); b = pop(); push(Integer.toUnsignedLong(b) < Integer.toUnsignedLong(a) ? -1 : 0); break;
+						}
+						break;
 
           case '&': s[sp - 2] = s[sp - 2] & s[sp - 1]; sp--; break;
   	      case '|': s[sp - 2] = s[sp - 2] | s[sp - 1]; sp--; break;
@@ -240,10 +248,10 @@ public class Dodo {
 	public static byte VARIABLE = 1;
 	public static byte NO_FLAGS = 0;
 
-	public static int wPREVIOUS = 0;
+	public static int wFLAGS = 0;
+	public static int wPREVIOUS = wFLAGS + 1;
 	public static int wCODE = wPREVIOUS + 4;
-	public static int wFLAGS = wCODE + 4;
-	public static int wNAMELEN = wFLAGS + 1;
+	public static int wNAMELEN = wCODE + 4;
 	public static int wNAME = wNAMELEN + 1;
 
 	public void string_to_TIB(String s) {
@@ -308,10 +316,10 @@ public class Dodo {
     t = pop();
     align();
     int w = here();
+    d.put(HIDDEN);
     d.putInt(d.getInt(LATEST));
     d.putInt(LATEST, w);
     d.putInt(0);
-    d.put(HIDDEN);
     d.put((byte)l);
     for (int i = 0; i < l; i++) d.put(d.get(IBUF + t + i));
     align();

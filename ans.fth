@@ -22,6 +22,9 @@
 : / $/ ;
 : MOD $% ;
 
+: 1+ 1 + ;
+: 1- 1 - ;
+
 : < $< ;
 : = $= ;
 : > $> ;
@@ -59,9 +62,22 @@
 : BYE $q ;
 : EXIT $\ ;
 
+: U< $u< ;
+
+: BL 32 ;
+: ISSPACE? bl 1+ u< ;
+: ISNOTSPACE? isspace? 0= ;
+: XT-SKIP >r begin dup while over c@ r@ execute while 1 /string repeat then r> drop ;
+
+
+
 : C, here c! 1 allot ;
 : W, here w! 2 allot ;
 : , here ! cell allot ;
+
+
+
+
 
 : BLOCK-BASE 0 ;
 : BLOCK-SIZE@ block-base 0 + ;
@@ -69,8 +85,8 @@
 : INTERPRETER@ latest@ cell + ;
 : STATE interpreter@ cell + ;
 : IBUF@ state cell + ;
-: IPOS@ ibuf@ 256 + ;
-: ILEN@ ipos@ cell + ;
+: >IN ibuf@ 256 + ;
+: ILEN@ >in cell + ;
 
 : SOURCE IBUF@ ILEN@ @ ;
 
@@ -94,5 +110,6 @@
 : BEGIN <mark ; immediate
 : AGAIN <resolve $$j ; immediate
 : UNTIL >mark $$?$\ >resolve <resolve $$j ; immediate
+: WHILE $$0 >mark $$? swap ; immediate
 
 : TYPE begin over c@ emit swap 1 + swap 1 - dup 0= until ;

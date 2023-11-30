@@ -1,0 +1,36 @@
+--> First colon creation works without problems.
+
+: FIRST_COLON ;
+
+--> This implies that context, whatever it is, has at its base address a cell containing
+--> the value of latest defined word.
+--> What is context?
+--> I can just set latest to be first cell of dictionary, instead of second cell.
+
+--> The first thing we notice here is that some words are already predefined. As DODO is 
+--> bytecode based, this have to be either first in this file OR preloaded in the C/Java API for
+--> this file to load correctly.
+
+: LATEST context @ ;
+
+--> Immediate flag must be 64 for this to be correct.
+
+: FLAG_IMMEDIATE 64 ;
+
+--> flags seem to be first character in a header, just adjust dodo for that.
+
+: IMMEDIATE
+        latest dup c@ flag_immediate OR
+        swap c!
+;
+
+: (   41 word drop ; immediate
+( That was the definition for the comment word. )
+( Now we can add comments to what we are doing! )
+( Note that we are in decimal numeric input mode. )
+
+: \ ( <line> -- , comment out rest of line )
+        EOL word drop
+; immediate
+
+

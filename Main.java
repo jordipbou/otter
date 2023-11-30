@@ -10,7 +10,8 @@ class Main {
     BufferedReader f =
       new BufferedReader(
         new InputStreamReader(
-          new FileInputStream("ans.fth")));
+          //new FileInputStream("ans.fth")));
+					new FileInputStream("system.fth")));
 
     try {
     while (true) {
