@@ -1,3 +1,8 @@
+: CELL $c ;
+
+: BLOCK-BASE $b ;
+: CONTEXT block-base cell + ;
+
 : FIRST_COLON ;
 
 : LATEST context @ ;

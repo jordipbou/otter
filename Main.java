@@ -3,15 +3,15 @@ import java.util.function.Consumer;
 
 class Main {
   public static void main(String[] args) throws IOException {
-    Dodo d = new Dodo();
+    //Dodo d = new Dodo();
+		Dodo d = Dodo.Sloth();
     d.x['E' - 'A'] = x -> { int n = x.pop(); System.out.print((char)n); };
-    d.x['D' - 'A'] = new Debug();
 
     BufferedReader f =
       new BufferedReader(
         new InputStreamReader(
-          //new FileInputStream("ans.fth")));
-					new FileInputStream("system.fth")));
+          new FileInputStream("ans.fth")));
+					//new FileInputStream("system.fth")));
 
     try {
     while (true) {

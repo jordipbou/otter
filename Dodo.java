@@ -1,17 +1,25 @@
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
-public class Dodo {
+public class Dodo implements Consumer<Dodo> {
+	// Extensions
   public Consumer<Dodo>[] x = new Consumer[26];
+
+	// Dictionary
   public ByteBuffer d = ByteBuffer.allocateDirect(1024 * 1024);
+
+	// Registers
   public int[] s = new int[256];
   public int sp = 0;
   public int[] r = new int[256];
   public int rp = 0;
   public int ip = d.capacity();
+
+	// Not so important registers
   public int err = 0;
   public boolean tr = false;
 
+	// External API
 	public int here() { return d.position(); }
 	public void allot(int n) { d.position(d.position() + n); }
 	public void align() { int h = here(); d.position((h + 3) & ~(3)); }
@@ -89,6 +97,8 @@ public class Dodo {
   public byte peek() { return d.get(ip); }
   public byte token() { return d.get(ip++); }
 
+	public void string() { push(ip); while (token() != '"') { }	push(ip - T() - 1); }
+
   public void step() {
     int a, b, c, n;
 		switch (peek()) {
@@ -109,6 +119,8 @@ public class Dodo {
   	    break;
   	  default:
   	    switch (token()) {
+					case '"': string(); break;
+
 					case '$': d.put(token()); break;
 
   	      case '1': push(1); break;
@@ -126,14 +138,7 @@ public class Dodo {
 
 					case 't': r[rp++] = s[--sp]; break;
 					case 'f': s[sp++] = r[--rp]; break;
-					/*
-          case 'u': push(r[rp - 1]); break;
-					case 'v': push(r[rp - 2]); break;
-					case 'w': push(r[rp - 3]); break;
-					case 'x': push(r[rp - 4]); break;
-					case 'y': push(r[rp - 5]); break;
-					case 'z': push(r[rp - 6]); break;
-					*/
+					case 'y': s[sp++] = r[rp - 1]; break;
 
   	      case '+': s[sp - 2] = s[sp - 2] + s[sp - 1]; sp--; break;
   	      case '-': s[sp - 2] = s[sp - 2] - s[sp - 1]; sp--; break;
@@ -173,6 +178,7 @@ public class Dodo {
   	      case 'i': execute(); break;
 					case 'j': jump(); break;
 					case '?': zjump(); break;
+
 					case 'c': push(4); break;
 					case 'b': push(0); break;
 					case 'e': err = s[sp - 1]; sp--; break;
@@ -183,6 +189,8 @@ public class Dodo {
 					case 'h': push(here()); break;
 					case 'a': allot(pop()); break;
 					case 'g': align(); break;
+
+					case 'v': tr = pop() != 0; break;
         }
 		}
   }
@@ -243,21 +251,33 @@ public class Dodo {
 	public static int IPOS = IBUF + 256;
 	public static int ILEN = IPOS + 4;
 
-	public static byte HIDDEN = 4;
-	public static byte IMMEDIATE = 2;
-	public static byte VARIABLE = 1;
+	public static byte IMMEDIATE = 32;
+	public static byte HIDDEN = 16;
+	public static byte COLON = 8;
+	public static byte VARIABLE = 4;
+	public static byte CONSTANT = 1;
 	public static byte NO_FLAGS = 0;
 
-	public static int wFLAGS = 0;
-	public static int wPREVIOUS = wFLAGS + 1;
+	public static int wPREVIOUS = 0;
 	public static int wCODE = wPREVIOUS + 4;
-	public static int wNAMELEN = wCODE + 4;
+	public static int wFLAGS = wCODE + 4;
+	public static int wNAMELEN = wFLAGS + 1;
 	public static int wNAME = wNAMELEN + 1;
 
 	public void string_to_TIB(String s) {
 		d.putInt(IPOS, 0);
 		d.putInt(ILEN, s.length());
 		for (int i = 0; i < s.length(); i++) d.put(IBUF + i, (byte)s.charAt(i));
+	}
+
+	public void parse() {
+		int c = (byte)pop();
+		int p = d.getInt(IPOS);
+		int l = d.getInt(ILEN);
+		push(p);
+		while (p < l && d.get(IBUF + p) != c) { p++; }
+		push(p - T());
+		d.putInt(IPOS, p);
 	}
 
 	public void parse_name() {
@@ -295,6 +315,12 @@ public class Dodo {
 		push(w);
 	}
 
+	public boolean do_comment(int l, int t) {
+		if (l != 1 || d.get(IBUF + t) != (byte)'\\') return false;
+		d.putInt(IPOS, d.getInt(ILEN));
+		return true;
+	}
+
   public boolean do_asm(int l, int t) {
     if (l < 2 || d.get(IBUF + t) != (byte)'\\') return false;
     for (int i = 0; i < l - 1; i++) d.put(d.capacity() - l + i, d.get(IBUF + t + i + 1));
@@ -316,10 +342,10 @@ public class Dodo {
     t = pop();
     align();
     int w = here();
-    d.put(HIDDEN);
     d.putInt(d.getInt(LATEST));
     d.putInt(LATEST, w);
     d.putInt(0);
+    d.put(HIDDEN);
     d.put((byte)l);
     for (int i = 0; i < l; i++) d.put(d.get(IBUF + t + i));
     align();
@@ -349,16 +375,25 @@ public class Dodo {
     }
   }
 
-	public void do_interpret(int w) {	eval(d.getInt(w + wCODE)); }
+	public void do_interpret(int w) {	
+		byte f = d.get(w + wFLAGS);
+		if ((f & CONSTANT) == CONSTANT || (f & VARIABLE) == VARIABLE) {
+			push(d.getInt(w + wCODE));
+		} else {
+			eval(d.getInt(w + wCODE)); 
+		}
+	}
 
 	public void do_compile(int w) {
 		int t = 1;
 		int c = d.getInt(w + wCODE);
 		while (t > 0) {
 			byte k = d.get(c);
-			if (k == '[' || k == '{') t++;
-			if (k == ']' || k == '}') t--;
-			if (t > 0) d.put(k);
+			if (k == '[') t++;
+			if (k == ']') t--;
+			if (t > 0) {
+				d.put(k);
+			}
 			c++;
 		}
 	}
@@ -383,11 +418,12 @@ public class Dodo {
 	        drop();
 	        int l = pop();
 	        int t = pop();
-	        if (!do_asm(l, t))
-	          if (!do_casm(l, t))
-	            if (!do_colon(l, t))
-	              if (!do_semicolon(l, t))
-	                do_number(l, t);
+					if (!do_comment(l, t)) 
+						if (!do_asm(l, t))
+	        	  if (!do_casm(l, t))
+	        	    if (!do_colon(l, t))
+	        	      if (!do_semicolon(l, t))
+	        	        do_number(l, t);
 				}
 			}
 		}
@@ -398,6 +434,58 @@ public class Dodo {
 		interpret();
 	}
 
+	public int header(int l, int t) {
+    align();
+    int w = here();
+    d.putInt(d.getInt(LATEST));
+    d.putInt(LATEST, w);
+    d.putInt(0);
+    d.put(NO_FLAGS);
+    d.put((byte)l);
+    for (int i = 0; i < l; i++) d.put(d.get(IBUF + t + i));
+    align();
+		return w;
+	}
+
+	public void create() {
+		parse_name();
+		if (T() == 0) { drop(); drop(); err = -16; return; }
+		else {
+			int l = pop();
+			int t = pop();
+			int w = header(l, t);
+			d.putInt(w + wCODE, here());
+			d.put(w + wFLAGS, VARIABLE);
+		}
+	}
+
+	public void does() {
+		int nt = d.getInt(d.getInt(LATEST));
+		int xt = d.getInt(nt + wCODE);
+		d.putInt(d.getInt(LATEST) + wCODE, here());
+		literal(xt);
+	}
+
+	public void immediate() {
+		int nt = d.getInt(d.getInt(LATEST));
+		byte f = d.get(nt + wFLAGS);
+		d.put(nt + wFLAGS, (byte)(f | IMMEDIATE));
+	}
+
+	public void accept(Dodo d) {
+		switch (token()) {
+			// case ':': d.colon(); break;
+			// case ';': d.semicolon(); break;
+			case 'c': d.create(); break;
+			case 'd': d.does(); break;
+			case 'i': d.immediate(); break;
+			case 'n': d.parse_name(); break;
+		  case 'p': d.parse(); break;
+			case 'v': d.variable(); break;
+			// case 'x': d.constant(); break;
+		}
+	}
+
   // ----- INITIALIZATION -----
 
 	public Dodo() {
@@ -405,5 +493,20 @@ public class Dodo {
 		d.putInt(LATEST, d.capacity());
 		d.putInt(INTERPRETER, d.capacity());	
 		d.position(ILEN + 4);
+	}
+
+	public static Dodo Sloth() {
+		Dodo d = new Dodo();
+		d.x['S' - 'A'] = d;
+		d.evaluate(": ! $! ;");
+		d.evaluate(": @ $@ ;");
+		d.evaluate(": IMMEDIATE $Si ;");
+		d.evaluate(": CREATE $Sc ;");
+		d.evaluate(": DOES> $Sd ;");
+		d.evaluate(": HERE $h ;");
+		d.evaluate(": CELL $c ;");
+		d.evaluate(": ALLOT $a ;");
+		d.evaluate(": , here cell allot ;");
+		return d;
 	}
 }
