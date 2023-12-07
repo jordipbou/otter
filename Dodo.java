@@ -1,29 +1,36 @@
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
-public class Dodo implements Consumer<Dodo> {
-	// Extensions
+/* ERROR MANAGEMENT */
+
+public class Dodo {
   public Consumer<Dodo>[] x = new Consumer[26];
 
-	// Dictionary
-  public ByteBuffer d = ByteBuffer.allocateDirect(1024 * 1024);
+	public Dictionary d;
 
-	// Registers
-  public int[] s = new int[256];
-  public int sp = 0;
-  public int[] r = new int[256];
-  public int rp = 0;
-  public int ip = d.capacity();
+	// General registers
+  public int[] s;
+  public int sp;
+  public int[] r;
+  public int rp;
+  public int ip;
+  public int err;
 
-	// Not so important registers
-  public int err = 0;
-  public boolean tr = false;
+	// Debugging registers
+	public boolean tr;
 
-	// External API
-	public int here() { return d.position(); }
-	public void allot(int n) { d.position(d.position() + n); }
-	public void align() { int h = here(); d.position((h + 3) & ~(3)); }
+	public Dodo(Dictionary dict) {
+		d = dict;
+		s = new int[256];
+		sp = 0;
+		r = new int[256];
+		rp = 0;
+		ip = d.capacity();
+		err = 0;
+		tr = false;
+	}
 
+	// Stack helpers
 	public int T() { return s[sp - 1]; }
 	public int N() { return s[sp - 2]; }
 	public int NN() { return s[sp - 3]; }
@@ -31,13 +38,14 @@ public class Dodo implements Consumer<Dodo> {
   public void push(int a) { s[sp++] = a; }
   public int pop() { return s[--sp]; }
   public void drop() { sp--; }
+	public void over() {push(s[sp - 2]); }
 
-  public boolean tail() {
-		return !(ip >= 0 && ip < d.capacity()) 
-			|| d.get(ip) == ']' 
-			|| d.get(ip) == '\\'; 
-	}
+	// Execution helpers
+  public byte peek() { return d.get(ip); }
+  public byte token() { return d.get(ip++); }
+	public boolean in_dict() { return ip >= 0 && ip < d.capacity(); }
 
+  public boolean tail() {	return !in_dict() || peek() == ']' || peek() == '\\'; }
   public void execute() { int q = pop(); if (!tail()) r[rp++] = ip; ip = q; }
 	public void jump() { int d = pop(); ip += d; }
 	public void zjump() { int d = pop(); int b = pop(); if (b == 0) ip += d; }
@@ -48,31 +56,12 @@ public class Dodo implements Consumer<Dodo> {
 	public void quit() { err = -256; }
 
   public void literal(int n) {
-    if (n == 1) {
-      d.put((byte)'1');
-    } else if (n >= -128 && n <= 127) {
-      d.put((byte)'\'');
-      d.put((byte)n);
-    } else if (n >= -32768 && n <= 32767) {
-      d.put((byte)'2');
-      d.putShort((short)n);
-    } else {
-      d.put((byte)'4');
-      d.putInt(n);
-    }
+    if (n == 1) { d.bcompile((byte)'1'); } 
+		else if (n >= -128 && n <= 127) { d.bcompile((byte)'\''); d.bcompile((byte)n); } 
+		else if (n >= -32768 && n <= 32767) { d.bcompile((byte)'2'); d.wcompile((short)n); } 
+		else { d.bcompile((byte)'4'); d.ccompile(n); }
   }
 	
-  public void block() {
-		int t = 1;
-		push(ip);
-		while (t > 0) {
-			switch (token()) {
-			  case '{': t++;
-				case '}': t--;
-			}
-		}
-	}
-
 	public void dump() {
 		int n = pop();
 		int a = pop();
@@ -94,10 +83,37 @@ public class Dodo implements Consumer<Dodo> {
 		System.out.println();
 	}
 
-  public byte peek() { return d.get(ip); }
-  public byte token() { return d.get(ip++); }
-
+	// Literal helpers
 	public void string() { push(ip); while (token() != '"') { }	push(ip - T() - 1); }
+	public void number() { 
+		int n = 0;
+		for (byte k = token(); k >= 48 && k <= 57; k = token()) { n = 10*n + (k - 48); }
+		ip--;
+		push(n);
+	}
+  public void block() { 
+		push(ip); 
+		for (int t = 1; t > 0;) { 
+			switch (token()) { 
+				case '{': t++; 
+				case '}': t--; 
+			} 
+		} 
+	}
+
+	// Basic combinators
+	public void times() { int q = pop(); int l = pop(); for (;l > 0; l--) { eval(q); } }
+	public void choice() { int f = pop(); int t = pop(); if (pop() != 0) eval(t); else eval(f); }
+
+	// String helpers
+	public void type() { 
+		int l = pop(); 
+		int s = pop(); 
+		for (int i = 0; i < l; i++) { 
+			push(d.get(s + i)); 
+			x['E' - 'A'].accept(this); 
+		} 
+	}
 
   public void step() {
     int a, b, c, n;
@@ -120,8 +136,12 @@ public class Dodo implements Consumer<Dodo> {
   	  default:
   	    switch (token()) {
 					case '"': string(); break;
+					case '#': number(); break;
+					case '?': choice(); break;
+					case 't': times(); break;
+					case 'y': type(); break;
 
-					case '$': d.put(token()); break;
+					case '$': d.bcompile(token()); break;
 
   	      case '1': push(1); break;
           case '\'': push((int)d.get(ip)); ip += 1; break;
@@ -133,12 +153,13 @@ public class Dodo implements Consumer<Dodo> {
   	      case 'o': push(s[sp - 2]); break;
   	      case 's': a = pop(); b = pop(); push(a); push(b); break;
   	      case 'r': a = pop(); b = pop(); c = pop(); push(b); push(a); push(c); break;
+					/*
   	      case 'n': s[sp - 2] = s[sp - 1]; sp--; break;
 					case 'p': a = pop(); push(s[a - 1]); break;
-
-					case 't': r[rp++] = s[--sp]; break;
-					case 'f': s[sp++] = r[--rp]; break;
-					case 'y': s[sp++] = r[rp - 1]; break;
+					*/
+					case '(': r[rp++] = s[--sp]; break;
+					case ')': s[sp++] = r[--rp]; break;
+					case 'f': s[sp++] = r[rp - 1]; break;
 
   	      case '+': s[sp - 2] = s[sp - 2] + s[sp - 1]; sp--; break;
   	      case '-': s[sp - 2] = s[sp - 2] - s[sp - 1]; sp--; break;
@@ -151,18 +172,22 @@ public class Dodo implements Consumer<Dodo> {
   	      case '>': s[sp - 2] = s[sp - 2] > s[sp - 1] ? -1 : 0; sp--; break;
 					case '0': s[sp - 1] = s[sp - 1] == 0 ? -1 : 0; break;
 
+					/*
 					case 'u':
 						switch (token()) {
 							case '<': a = pop(); b = pop(); push(Integer.toUnsignedLong(b) < Integer.toUnsignedLong(a) ? -1 : 0); break;
 						}
 						break;
+					*/
 
           case '&': s[sp - 2] = s[sp - 2] & s[sp - 1]; sp--; break;
   	      case '|': s[sp - 2] = s[sp - 2] | s[sp - 1]; sp--; break;
   	      case '^': s[sp - 2] = s[sp - 2] ^ s[sp - 1]; sp--; break;
   	      case '~': s[sp - 1] = ~s[sp - 1]; break;
+					/*
 					case '(': s[sp - 2] = s[sp - 2] << s[sp - 1]; sp--; break;
 					case ')': s[sp - 2] = s[sp - 2] >> s[sp - 1]; sp--; break;
+					*/
 
   	      case '!': a = pop(); n = pop(); d.putInt(a, n); break;
   	      case '@': a = pop(); push(d.getInt(a)); break;
@@ -172,12 +197,12 @@ public class Dodo implements Consumer<Dodo> {
   	      case '.': a = pop(); push(d.get(a)); break;
 
 					case '[': quotation(); break;
-					case '\\': case '}': case ']': ret(); break;
+					case '}': case ']': ret(); break;
 					case '{': block(); break;
 
   	      case 'i': execute(); break;
 					case 'j': jump(); break;
-					case '?': zjump(); break;
+					case 'z': zjump(); break;
 
 					case 'c': push(4); break;
 					case 'b': push(0); break;
@@ -186,9 +211,9 @@ public class Dodo implements Consumer<Dodo> {
 
 					case '`': dump(); break;
 
-					case 'h': push(here()); break;
-					case 'a': allot(pop()); break;
-					case 'g': align(); break;
+					case 'h': push(d.here()); break;
+					case 'a': d.allot(pop()); break;
+					case 'g': d.align(); break;
 
 					case 'v': tr = pop() != 0; break;
         }
@@ -205,10 +230,12 @@ public class Dodo implements Consumer<Dodo> {
   }
 
   public void asm(String s) {
-    int l = s.length();
-    ip = d.capacity() - l;
-    for (int i = 0; i < l; i++) { d.put(ip + i, (byte)s.charAt(i)); }
-    inner();
+		if (d.tunused() <= s.length()) d.here_to_there();
+		ip = d.there();
+		if (d.tunused() <= s.length()) { err = -256; return; }
+    for (int i = 0; i < s.length(); i++) { d.btransient((byte)s.charAt(i)); }
+		d.btransient((byte)']');
+		inner();
   }
 
   // Tracing
@@ -217,6 +244,13 @@ public class Dodo implements Consumer<Dodo> {
 		char k;
     while (t > 0 && c < d.capacity()) {
       switch (k = (char)d.get(c++)) {
+				case '#': 
+					System.out.printf("#");
+					while ((k = (char)d.get(c++)) >= 48 && k <= 57) { 
+						System.out.printf("%c", k); 
+					}; 
+					c--; 
+					break;
         case '{': case '[': t++; System.out.print(k); break;
         case '}': case ']': t--; System.out.print(k); break;
         case '\'': System.out.printf("#%d", d.get(c++)); break;
@@ -240,273 +274,4 @@ public class Dodo implements Consumer<Dodo> {
       dump_code((int)r[i]);
     }
   }
-
-  // ----- OUTER INTERPRETER ------
-
-	public static int SIZE = 0;
-	public static int LATEST = SIZE + 4;
-	public static int INTERPRETER = LATEST + 4;
-	public static int STATE = INTERPRETER + 4;
-	public static int IBUF = STATE + 4;
-	public static int IPOS = IBUF + 256;
-	public static int ILEN = IPOS + 4;
-
-	public static byte IMMEDIATE = 32;
-	public static byte HIDDEN = 16;
-	public static byte COLON = 8;
-	public static byte VARIABLE = 4;
-	public static byte CONSTANT = 1;
-	public static byte NO_FLAGS = 0;
-
-	public static int wPREVIOUS = 0;
-	public static int wCODE = wPREVIOUS + 4;
-	public static int wFLAGS = wCODE + 4;
-	public static int wNAMELEN = wFLAGS + 1;
-	public static int wNAME = wNAMELEN + 1;
-
-	public void string_to_TIB(String s) {
-		d.putInt(IPOS, 0);
-		d.putInt(ILEN, s.length());
-		for (int i = 0; i < s.length(); i++) d.put(IBUF + i, (byte)s.charAt(i));
-	}
-
-	public void parse() {
-		int c = (byte)pop();
-		int p = d.getInt(IPOS);
-		int l = d.getInt(ILEN);
-		push(p);
-		while (p < l && d.get(IBUF + p) != c) { p++; }
-		push(p - T());
-		d.putInt(IPOS, p);
-	}
-
-	public void parse_name() {
-		int p = d.getInt(IPOS);
-		int l = d.getInt(ILEN);
-		while (p < l && Character.isSpace((char)d.get(IBUF + p))) { p++; }
-		push(p);
-		while (p < l && !Character.isSpace((char)d.get(IBUF + p))) { p++; }
-		push(p - T());
-		d.putInt(IPOS, p);
-	}
-
-	public boolean compare_without_case(int w, int t, int l) {
-		if (d.get(w + wNAMELEN) != (byte)l) return false;
-		for (int i = 0; i < l; i++) {
-			int a = (int)d.get(w + wNAME + i);
-			int b = (int)d.get(IBUF + t + i);
-			if (a >= 97 && a <= 122) a = a - 32;
-			if (b >= 97 && b <= 122) b = b - 32;
-			if (a != b) return false;
-		}
-		return true;
-	}
-
-	public void find_name() {
-		int l = pop();
-		int t = pop();
-		int w = d.getInt(LATEST);
-		while (w < d.capacity()) {
-			if (compare_without_case(w, t, l)) break;
-			w = d.getInt(w + wPREVIOUS);
-		}
-		push(t);
-		push(l);
-		push(w);
-	}
-
-	public boolean do_comment(int l, int t) {
-		if (l != 1 || d.get(IBUF + t) != (byte)'\\') return false;
-		d.putInt(IPOS, d.getInt(ILEN));
-		return true;
-	}
-
-  public boolean do_asm(int l, int t) {
-    if (l < 2 || d.get(IBUF + t) != (byte)'\\') return false;
-    for (int i = 0; i < l - 1; i++) d.put(d.capacity() - l + i, d.get(IBUF + t + i + 1));
-    d.put(d.capacity() - 1, (byte)']');
-    eval(d.capacity() - l);
-    return true;
-  }
-
-  public boolean do_casm(int l, int t) {
-    if (l < 2 || d.get(IBUF + t) != (byte)'$') return false;
-    for (int i = 0; i < l - 1; i++) d.put(d.get(IBUF + t + i + 1));
-    return true;
-  }
-
-  public boolean do_colon(int l, int t) {
-    if (l != 1 || d.get(IBUF + t) != (byte)':') return false;
-    parse_name();
-    l = pop();
-    t = pop();
-    align();
-    int w = here();
-    d.putInt(d.getInt(LATEST));
-    d.putInt(LATEST, w);
-    d.putInt(0);
-    d.put(HIDDEN);
-    d.put((byte)l);
-    for (int i = 0; i < l; i++) d.put(d.get(IBUF + t + i));
-    align();
-    d.putInt(w + wCODE, here());
-    d.putInt(STATE, 1);
-    return true;
-  }
-
-  public boolean do_semicolon(int l, int t) {
-    if (l != 1 || d.get(IBUF + t) != (byte)';') return false; 
-    d.put((byte)']');
-    d.putInt(STATE, 0);
-    int w = d.getInt(LATEST);
-    d.put(w + wFLAGS, NO_FLAGS);
-    return true;
-  }
-
-  public void do_number(int l, int t) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < l; i++) sb.append((char)d.get(IBUF + t + i));
-    try {
-      int n = Integer.parseInt(sb.toString());
-      if (d.getInt(STATE) > 0) literal(n);
-      else push(n);
-    } catch (NumberFormatException e) {
-      err = -13;
-    }
-  }
-
-	public void do_interpret(int w) {	
-		byte f = d.get(w + wFLAGS);
-		if ((f & CONSTANT) == CONSTANT || (f & VARIABLE) == VARIABLE) {
-			push(d.getInt(w + wCODE));
-		} else {
-			eval(d.getInt(w + wCODE)); 
-		}
-	}
-
-	public void do_compile(int w) {
-		int t = 1;
-		int c = d.getInt(w + wCODE);
-		while (t > 0) {
-			byte k = d.get(c);
-			if (k == '[') t++;
-			if (k == ']') t--;
-			if (t > 0) {
-				d.put(k);
-			}
-			c++;
-		}
-	}
-
- 	public void interpret() {
-		int i = d.getInt(INTERPRETER);
-		if (i < d.capacity()) { eval(i); }
-		else {
-			while (err == 0) {
-				parse_name();
-				if (T() == 0) { drop(); drop(); return; }
-				find_name();
-				if (T() < d.capacity()) {
-					int w = pop();
-					drop(); drop();
-					if (d.getInt(STATE) == 0 || (d.get(w + wFLAGS) & IMMEDIATE) == IMMEDIATE) {
-						do_interpret(w);
-					} else {
-						do_compile(w);
-					}
-				} else {
-	        drop();
-	        int l = pop();
-	        int t = pop();
-					if (!do_comment(l, t)) 
-						if (!do_asm(l, t))
-	        	  if (!do_casm(l, t))
-	        	    if (!do_colon(l, t))
-	        	      if (!do_semicolon(l, t))
-	        	        do_number(l, t);
-				}
-			}
-		}
-	}
-
-	public void evaluate(String s) {
-		string_to_TIB(s);
-		interpret();
-	}
-
-	public int header(int l, int t) {
-    align();
-    int w = here();
-    d.putInt(d.getInt(LATEST));
-    d.putInt(LATEST, w);
-    d.putInt(0);
-    d.put(NO_FLAGS);
-    d.put((byte)l);
-    for (int i = 0; i < l; i++) d.put(d.get(IBUF + t + i));
-    align();
-		return w;
-	}
-
-	public void create() {
-		parse_name();
-		if (T() == 0) { drop(); drop(); err = -16; return; }
-		else {
-			int l = pop();
-			int t = pop();
-			int w = header(l, t);
-			d.putInt(w + wCODE, here());
-			d.put(w + wFLAGS, VARIABLE);
-		}
-	}
-
-	public void does() {
-		int nt = d.getInt(d.getInt(LATEST));
-		int xt = d.getInt(nt + wCODE);
-		d.putInt(d.getInt(LATEST) + wCODE, here());
-		literal(xt);
-	}
-
-	public void immediate() {
-		int nt = d.getInt(d.getInt(LATEST));
-		byte f = d.get(nt + wFLAGS);
-		d.put(nt + wFLAGS, (byte)(f | IMMEDIATE));
-	}
-
-	public void accept(Dodo d) {
-		switch (token()) {
-			// case ':': d.colon(); break;
-			// case ';': d.semicolon(); break;
-			case 'c': d.create(); break;
-			case 'd': d.does(); break;
-			case 'i': d.immediate(); break;
-			case 'n': d.parse_name(); break;
-		  case 'p': d.parse(); break;
-			case 'v': d.variable(); break;
-			// case 'x': d.constant(); break;
-		}
-	}
-
-  // ----- INITIALIZATION -----
-
-	public Dodo() {
-		d.putInt(SIZE, d.capacity());
-		d.putInt(LATEST, d.capacity());
-		d.putInt(INTERPRETER, d.capacity());	
-		d.position(ILEN + 4);
-	}
-
-	public static Dodo Sloth() {
-		Dodo d = new Dodo();
-		d.x['S' - 'A'] = d;
-		d.evaluate(": ! $! ;");
-		d.evaluate(": @ $@ ;");
-		d.evaluate(": IMMEDIATE $Si ;");
-		d.evaluate(": CREATE $Sc ;");
-		d.evaluate(": DOES> $Sd ;");
-		d.evaluate(": HERE $h ;");
-		d.evaluate(": CELL $c ;");
-		d.evaluate(": ALLOT $a ;");
-		d.evaluate(": , here cell allot ;");
-		return d;
-	}
 }

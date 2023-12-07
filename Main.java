@@ -3,10 +3,11 @@ import java.util.function.Consumer;
 
 class Main {
   public static void main(String[] args) throws IOException {
-    //Dodo d = new Dodo();
-		Dodo d = Dodo.Sloth();
+    //Dodo d = new Dodo(new Dictionary(1024 * 1024));
+		Sloth d = new Sloth();
     d.x['E' - 'A'] = x -> { int n = x.pop(); System.out.print((char)n); };
 
+/*
     BufferedReader f =
       new BufferedReader(
         new InputStreamReader(
@@ -26,7 +27,7 @@ class Main {
       d.trace();
     }
     } catch(IOException e) {}
-
+*/
     BufferedReader obj = 
       new BufferedReader(
         new InputStreamReader(
@@ -50,6 +51,7 @@ class Main {
 				System.out.println("Ok");
       }
     }     
+
     //Otter o = new Otter();
     
     //o.x = new Consumer[26];
